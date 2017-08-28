@@ -1,0 +1,10 @@
+{	
+	"ProcessHaloplexHS.JobGroup":"/dspencer/haloplextest",
+	"ProcessHaloplexHS.SampleSheet":"/gscuser/dspencer/projects/wdltest/haloplex/samples.txt",
+	"ProcessHaloplexHS.TargetBed":"/gscuser/dspencer/projects/wdltest/haloplex/allo9.bed",
+	"ProcessHaloplexHS.OutputDir":"/gscuser/dspencer/projects/wdltest/haloplex/test/",
+	"ProcessHaloplexHS.Files":["/gscuser/dspencer/projects/wdltest/haloplex/Undetermined_S0_L001_I1_001.short.fastq.gz",
+				   "/gscuser/dspencer/projects/wdltest/haloplex/Undetermined_S0_L001_I2_001.short.fastq.gz",
+				   "/gscuser/dspencer/projects/wdltest/haloplex/Undetermined_S0_L001_R1_001.short.fastq.gz",
+				   "/gscuser/dspencer/projects/wdltest/haloplex/Undetermined_S0_L001_R2_001.short.fastq.gz"]
+}

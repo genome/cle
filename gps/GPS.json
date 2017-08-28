@@ -1,0 +1,9 @@
+{
+    "FastqToTargetedAlignedBam.OutputDir":"/gscmnt/gc3042/cle_validation/GPS_fastq/wdl_test/",
+    "FastqToTargetedAlignedBam.TMPDIR":"/tmp/",
+    "FastqToTargetedAlignedBam.FinalLabel":"GPS_TEST",
+    "FastqToTargetedAlignedBam.JobGroup":"/fdu/aligntest",
+    "FastqToTargetedAlignedBam.ReadGroup":"@RG\tPU:H3LNLBCXY.1\tLB:GPS_TEST-lg2-lib1\tID:2896192084\tSM:GPS_TEST\tPL:ILLUMINA\tCN:WUGSC",
+    "FastqToTargetedAlignedBam.Read1s":["/gscmnt/gc3042/cle_validation/GPS_fastq/2017_04_27/fastq/H_QT-G15-3958-G15-3958_ACTTGATA-ACTTGATA_read1.fastq.gz","/gscmnt/gc3042/cle_validation/GPS_fastq/2017_04_27/fastq/H_QT-G15-3958-G15-3958_CAGATCAT-CAGATCAT_read1.fastq.gz","/gscmnt/gc3042/cle_validation/GPS_fastq/2017_04_27/fastq/H_QT-G15-3958-G15-3958_CAGGACGT-CAGGACGT_read1.fastq.gz"],
+    "FastqToTargetedAlignedBam.Read2s":["/gscmnt/gc3042/cle_validation/GPS_fastq/2017_04_27/fastq/H_QT-G15-3958-G15-3958_ACTTGATA-ACTTGATA_read2.fastq.gz","/gscmnt/gc3042/cle_validation/GPS_fastq/2017_04_27/fastq/H_QT-G15-3958-G15-3958_CAGATCAT-CAGATCAT_read2.fastq.gz","/gscmnt/gc3042/cle_validation/GPS_fastq/2017_04_27/fastq/H_QT-G15-3958-G15-3958_CAGGACGT-CAGGACGT_read2.fastq.gz"]
+}
