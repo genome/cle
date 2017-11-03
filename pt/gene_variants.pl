@@ -78,6 +78,7 @@ sub get_gene_names {
     my $names;
     while (my $name = $fh->getline) {
         chomp $name;
+	$name =~ s/\s+$//;
         $names->{$name} = 1;
     }
     $fh->close;
