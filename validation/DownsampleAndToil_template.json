@@ -1,0 +1,9 @@
+{
+    "DownsampleAndToil.TumorCram":"TumorCramPath",
+    "DownsampleAndToil.NormalCram":"NormalCramPath",
+    "DownsampleAndToil.OutputDir":"OutputDirPath",
+    "DownsampleAndToil.DownsampleRatio":"DownsampleRatioValue",
+    "DownsampleAndToil.TumorLabel":"TumorLabelName",
+    "DownsampleAndToil.NormalLabel":"NormalLabelName",
+    "DownsampleAndToil.JobGroup":"/fdu/downsample"
+}
