@@ -15,16 +15,16 @@ workflow ProcessHaloplexHS {
   String JobGroup
   String OutputDir
 
-  Array[String] Adapters = ["NNNGATCGGAAGAGCACACGTCTGAACTCCAGTCAC","NNNAGATCGGAAGAGCGTCGTGTAGGGAAA"]
+  Array[String] Adapters = ["GATCGGAAGAGCACACGTCTGAACTCCAGTCAC","AGATCGGAAGAGCGTCGTGTAGGGAAA"]
 
-  String Reference = "/gscuser/dspencer/refdata/GRCh37/all_sequences.fa"
-  String ReferenceIndex = "/gscuser/dspencer/refdata/GRCh37/all_sequences.fa.fai"
-  String Dictionary = "/gscuser/dspencer/refdata/GRCh37/all_sequences.dict"
+  String Reference = "/gscmnt/gc2709/info/production_reference_GRCh38DH/reference/all_sequences.fa"
+  String VEP = "/gscmnt/gc2709/info/production_reference_GRCh38DH/CLE/IDTExome/VEP_cache"
+  String CustomAnnotation = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/liftover/vcf/myeloseq_custom_annotations.120417.hg38.vcf.gz,MYELOSEQ,vcf,exact,0,TCGA_AC,MDS_AC,MYELOSEQBLACKLIST"
 
   call barcode_demux {
        input: Dir=IlluminaDir, #Fastqs=get_fastq_files.fastq_files,
               SampleSheet=SampleSheet,
-	      SampleIndexMM=0,
+	          SampleIndexMM=0,
               jobGroup=JobGroup
   }
 
@@ -38,33 +38,36 @@ workflow ProcessHaloplexHS {
   scatter (samples in inputData){
   	 call trim_reads {
                input: Index=samples[0],
-	       	      SampleSheetFile=prepare_samples.sample_sheet,
+	       	          SampleSheetFile=prepare_samples.sample_sheet,
                       Adapters=Adapters,
                       jobGroup=JobGroup
 	 }
+
    	 call align_barcode_and_sort_reads {
 	       input: Fastq=trim_reads.fastq_file,
 		      refFasta=Reference,
 		      jobGroup=JobGroup
-         }
-         call consensus_bam {
-               input: Bam=align_barcode_and_sort_reads.bam_file,
-		      BamIndex=align_barcode_and_sort_reads.bam_index,
-                      TargetBed=TargetBed,
-                      refFasta=Reference,
-                      jobGroup=JobGroup
-         }
+     }
+
+     call consensus_bam {
+           input: Bam=align_barcode_and_sort_reads.bam_file,
+		          BamIndex=align_barcode_and_sort_reads.bam_index,
+                  TargetBed=TargetBed,
+		          AmpliconBed=AmpliconBed,
+                  refFasta=Reference,
+                  jobGroup=JobGroup
+     }
 
 	 call haloplex_qc {
 	      input: refFasta=Reference,
 	      	     AlignedBam=align_barcode_and_sort_reads.bam_file,
 	      	     ConsensusBam=consensus_bam.bam_file,
-		     TargetBed=TargetBed,
-		     AmpliconBed=AmpliconBed,
-		     CoverageBed=CoverageBed,
-		     Name=samples[1],
-		     DemuxFile=prepare_samples.sample_sheet,
-		     jobGroup=JobGroup
+		         TargetBed=TargetBed,
+		         AmpliconBed=AmpliconBed,
+		         CoverageBed=CoverageBed,
+		         Name=samples[1],
+		         DemuxFile=prepare_samples.sample_sheet,
+		         jobGroup=JobGroup
 	 }
 
 	 call run_varscan {
@@ -72,60 +75,88 @@ workflow ProcessHaloplexHS {
                      BamIndex=consensus_bam.bam_index,
                      CoverageBed=CoverageBed,
                      refFasta=Reference,
-		     Name=samples[1],
+		             Name=samples[1],
                      jobGroup=JobGroup
-         }
+     }
 
+	 call clean_variants as clean_varscan_indels {
+	      input: Vcf=run_varscan.varscan_indel_file,
+	      	     Name=samples[1] + ".varscan_indel",
+                 refFasta=Reference,
+                 jobGroup=JobGroup
+	 }
 
 	 call run_platypus {
              input: Bam=consensus_bam.bam_file,
                     BamIndex=consensus_bam.bam_index,
                     CoverageBed=CoverageBed,
-		    Name=samples[1],
+		            Name=samples[1],
                     refFasta=Reference,
                     jobGroup=JobGroup
-        }
+     }
 
-	 call run_pindel_region as run_pindel_flt3itd {
-              input: Bam=consensus_bam.bam_file,
-	             BamIndex=consensus_bam.bam_index,
-	             Reg='13:28608124-28608453',
-	             refFasta=Reference,
-	             Name=samples[1],
-	             jobGroup=JobGroup
+	call clean_variants as clean_platypus {
+	     input: Vcf=run_platypus.platypus_vcf_file,
+	     	    Name=samples[1] + ".platypus",
+	     	    refFasta=Reference,
+		        jobGroup=JobGroup
 	}
+	
+	call run_pindel_region as run_pindel_flt3itd {
+              input: Bam=consensus_bam.bam_file,
+                     BamIndex=consensus_bam.bam_index,
+	                 Reg='chr13:28033987-28034316',
+	                 refFasta=Reference,
+	                 Name=samples[1],
+	                 jobGroup=JobGroup
+	}
+
+	call clean_variants as clean_pindel_itd {
+	     input: Vcf=run_pindel_flt3itd.pindel_vcf_file,
+	     	    Name=samples[1],
+                refFasta=Reference,
+                jobGroup=JobGroup
+    }
 
 	call combine_variants {
              input: VarscanSNV=run_varscan.varscan_snv_file,
-                    VarscanIndel=run_varscan.varscan_indel_file,
-                    PindelITD=run_pindel_flt3itd.pindel_vcf_file,
-                    Platypus=run_platypus.platypus_vcf_file,
+                    VarscanIndel=clean_varscan_indels.cleaned_vcf_file,
+                    PindelITD=clean_pindel_itd.cleaned_vcf_file,
+                    Platypus=clean_platypus.cleaned_vcf_file,
                     Bam=consensus_bam.bam_file,
                     BamIndex=consensus_bam.bam_index,
                     refFasta=Reference,
                     Name=samples[1],
                     jobGroup=JobGroup
 	}
-	
+
+	call run_vep {
+	             input: CombineVcf=combine_variants.combined_vcf_file,
+                        refFasta=Reference,
+                        Vepcache=VEP,
+			            CustomAnnotation=CustomAnnotation,
+                        Name=samples[1],
+                        jobGroup=JobGroup
+    }
+
 	call gather_files {
-	      input: OutputFiles=[trim_reads.trimstats_file,
-			   align_barcode_and_sort_reads.bam_file,
-	      	           align_barcode_and_sort_reads.bam_index,
-			   consensus_bam.bam_file,
-			   consensus_bam.bam_index,
-			   haloplex_qc.coverage_qc_file,
-			   haloplex_qc.coverage_file,
-			   haloplex_qc.amplicon_counts,
-			   haloplex_qc.gc_length_plot,
-			   haloplex_qc.coverage_plot,
-			   run_varscan.varscan_snv_file,
-			   run_varscan.varscan_indel_file,
-			   run_pindel_flt3itd.pindel_vcf_file,
-			   run_platypus.platypus_vcf_file,
-			   combine_variants.combined_vcf_file],
-		     OutputDir=OutputDir,
-		     SubDir=samples[1] + "_" + samples[0],
-		     jobGroup=JobGroup
+	      input: OutputFiles=[align_barcode_and_sort_reads.bam_file,
+	      	     align_barcode_and_sort_reads.bam_index,
+			     consensus_bam.bam_file,
+			     consensus_bam.bam_index,
+			     haloplex_qc.coverage_qc_file,
+			     haloplex_qc.coverage_qc_json_file,
+			     run_varscan.varscan_snv_file,
+			     clean_varscan_indels.cleaned_vcf_file,
+			     clean_pindel_itd.cleaned_vcf_file,
+			     clean_platypus.cleaned_vcf_file,
+			     combine_variants.combined_vcf_file,
+			     run_vep.annotated_vcf,
+			     run_vep.annotated_filtered_vcf,
+			     run_vep.annotated_filtered_tsv],
+		         OutputDir=OutputDir,
+		         SubDir=samples[1] + "_" + samples[0],
+		         jobGroup=JobGroup
 	 }
   }
 }
@@ -214,13 +245,14 @@ task trim_reads {
      String Index
      File SampleSheetFile
      Array[String] Adapters
+     Int? TrimN
      String jobGroup
 
      command {
      	export PYTHONPATH=/opt/cutadapt/lib/python2.7/site-packages/ && \
-	/opt/cutadapt/bin/cutadapt --interleaved -u 4 -m 40 -a ${Adapters[0]} -A ${Adapters[1]} -o trimmed.fq \
-	$(/bin/grep ${Index} ${SampleSheetFile} | cut -f 3) $(/bin/grep ${Index} ${SampleSheetFile} | cut -f 4) > trimstats.txt && \
-	gzip -c trimmed.fq > trimmed.fq.gz
+	/opt/cutadapt/bin/cutadapt --interleaved -a ${Adapters[0]} -A ${Adapters[1]} \
+	$(/bin/grep ${Index} ${SampleSheetFile} | cut -f 3) $(/bin/grep ${Index} ${SampleSheetFile} | cut -f 4) | \
+	/opt/cutadapt/bin/cutadapt --interleaved -u ${default=3 TrimN} -u -${default=3 TrimN} -U ${default=3 TrimN} -U -${default=3 TrimN} -m 30 -o trimmed.fq.gz - 
      }
      runtime {
              docker_image: "dhspence/docker-cutadapt:latest"
@@ -232,7 +264,6 @@ task trim_reads {
      }
      output {
 	    File fastq_file = "trimmed.fq.gz"
-	    File trimstats_file = "trimstats.txt"
      }
 }
 
@@ -279,11 +310,13 @@ task haloplex_qc {
      String Name
      Int? Mincov1
      Int? Mincov2
+     Float? ExonQC 
      String jobGroup
 
      command {
-     	     /usr/bin/perl /usr/local/bin/CalculateCoverageQC.072617.pl ${refFasta} ${AmpliconBed} ${TargetBed} ${CoverageBed} \
-	     ${default=50 Mincov1} ${default=20 Mincov2} ${DemuxFile} ${AlignedBam} ${ConsensusBam} ${Name}
+     	     /usr/bin/perl /gscuser/dspencer/projects/wdltest/haloplex/CalculateCoverageQC.v1.121117.pl -r ${refFasta} -d ${DemuxFile} \
+	     -a ${AmpliconBed} -t ${TargetBed} -b ${CoverageBed} -c ${ConsensusBam} -w ${AlignedBam} -m ${default=50 Mincov1} \
+	     -q ${default='0.95' ExonQC} -n ${Name}
      }
      runtime {
      	     docker_image: "dhspence/docker-haloplexqc:latest"
@@ -295,10 +328,7 @@ task haloplex_qc {
      } 
      output {
      	    File coverage_qc_file = "${Name}.qc.txt"
-     	    File coverage_file = "${Name}.coverage.txt"
-     	    File amplicon_counts = "${Name}.amplicon_counts.txt"
-     	    File coverage_plot = "${Name}.coverage_qc.pdf"
-     	    File gc_length_plot = "${Name}.gc_length_qc.pdf"
+     	    File coverage_qc_json_file = "${Name}.qc.json"
      }
 }
 
@@ -368,16 +398,17 @@ task consensus_bam {
      File Bam
      File BamIndex
      String TargetBed
+     String AmpliconBed
      String refFasta
      String jobGroup
 
      command {
              /usr/bin/java -Xmx6g \
 	     -jar /opt/gatk/public/external-example/target/external-example-1.0-SNAPSHOT.jar \
-	     -T WalkerTRConsensus -I ${Bam} -mmq 20 \
-	     -L ${TargetBed} -dcov 500000 \
-	     -cbam consensus.bam \
-	     -R ${refFasta} && \
+	     -T WalkerTRConsensus_wk5 -I ${Bam} \
+	     -L ${TargetBed} --ampliconBed ${AmpliconBed} -dcov 1000000 \
+	     -cbam consensus.bam -maxNM 5 -mmq 10 \
+	     -R ${refFasta} > condense.log.txt && \
 	     /usr/bin/samtools index consensus.bam
      }
 
@@ -392,6 +423,7 @@ task consensus_bam {
      output {
             File bam_file = "consensus.bam"
             File bam_index = "consensus.bam.bai"
+	    File log = "condense.log.txt"
      }
 }
 
@@ -406,7 +438,7 @@ task run_platypus {
 
      command <<<
      	     /usr/bin/awk '{ print $1":"$2+1"-"$3; }' ${CoverageBed} > "regions.txt" && \
-     	     python /opt/platypus/Platypus_0.8.1/Platypus.py callVariants --bamFiles=${Bam} \
+     	     /usr/bin/python /opt/platypus/Platypus_0.8.1/Platypus.py callVariants --bamFiles=${Bam} \
 	     	 --regions regions.txt --refFile=${refFasta} \
 	         --nCPU 1 ${"--source=" + DocmVcf} --output="${Name}.platypus.vcf" \
 	         --minReads 5 --filterDuplicates=0 --minFlank=10 --assemble 1 --filterReadPairsWithSmallInserts=0 \
@@ -425,6 +457,29 @@ task run_platypus {
      }
 }
 
+task clean_variants {
+     String Vcf
+     String Name
+     String refFasta
+     String jobGroup
+
+     command {
+            /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --splitMultiallelics --variant ${Vcf} -o /tmp/out.vcf && \
+            /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T VariantsToAllelicPrimitives -R ${refFasta} -V /tmp/out.vcf -o ${Name}.cleaned.vcf
+     }
+     runtime {
+             docker_image: "dhspence/docker-amplicon-readcount:latest"
+             cpu: "1"
+             memory_gb: "10"
+             queue: "research-hpc"
+             resource: "rusage[gtmp=10, mem=10000]"
+             job_group: jobGroup
+     }
+     output {
+            File cleaned_vcf_file = "${Name}.cleaned.vcf"
+     }
+}
+
 task combine_variants {
      String VarscanSNV
      String VarscanIndel
@@ -438,12 +493,11 @@ task combine_variants {
 
      command {
      	     /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
-	     --variant:varscanSNV ${VarscanSNV} --variant:Platypus ${Platypus} --variant:PindelITD ${PindelITD} -o /tmp/out.vcf --genotypemergeoption UNIQUIFY && \
-	     /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o combined.vcf && \
-	     python /usr/local/bin/addAmpliconInfoAndCountReads.py -r ${refFasta} combined.vcf ${Bam} ${Name} > ${Name}.combined_and_tagged.vcf
+	     --variant:varscanSNV ${VarscanSNV} --variant:Platypus ${Platypus} --variant:PindelITD ${PindelITD} -o combined.vcf --genotypemergeoption UNIQUIFY && \
+	     /usr/bin/python /usr/bin/addAmpliconInfoAndCountReads.py -r ${refFasta} combined.vcf ${Bam} ${Name} > ${Name}.combined_and_tagged.vcf
      }
      runtime {
-     	     docker_image: "dhspence/docker-amplicon-readcount:latest"
+     	     docker_image: "registry.gsc.wustl.edu/fdu/gatk-biopython-pysam-test1"
              cpu: "1"
              memory_gb: "10"
              queue: "research-hpc"
@@ -455,6 +509,46 @@ task combine_variants {
      }
 
 }
+
+task run_vep {
+    File CombineVcf
+    String refFasta
+    String Vepcache
+    String CustomAnnotation
+    Float? maxAF
+    String Name
+    String jobGroup
+
+    command {
+            /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl --format vcf \
+	    --vcf --plugin Downstream --plugin Wildtype --fasta ${refFasta} --hgvs --symbol --term SO --flag_pick \
+	    -i ${CombineVcf} --custom ${CustomAnnotation} --offline --cache --max_af --dir ${Vepcache} -o ${Name}.annotated.vcf && \
+            /opt/htslib/bin/bgzip ${Name}.annotated.vcf && /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
+	    /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /opt/vep/ensembl-vep/filter_vep -i ${Name}.annotated.vcf.gz --format vcf \
+	    --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF) and not MYELOSEQ_MYELOSEQBLACKLIST" -o ${Name}.annotated_filtered.vcf && \
+	    bgzip ${Name}.annotated_filtered.vcf && tabix -p vcf ${Name}.annotated_filtered.vcf.gz && \
+            /usr/bin/java -Xmx4g -jar /opt/GenomeAnalysisTK.jar -T VariantsToTable \
+            -R ${refFasta} --showFiltered --variant ${Name}.annotated_filtered.vcf.gz -o /tmp/variants.tsv \
+            -F CHROM -F POS -F ID -F FILTER -F REF -F ALT -F set -GF TAMP -GF SAMP -GF VAFTYPE -GF CVAF -GF NR -GF NV && \
+	    /usr/bin/python /usr/bin/add_annotations_to_table_helper.py /tmp/variants.tsv ${Name}.annotated_filtered.vcf.gz \
+	    Consequence,SYMBOL,EXON,INTRON,Feature_type,Feature,HGVSc,HGVSp,HGNC_ID,MAX_AF,MYELOSEQ_TCGA_AC,MYELOSEQ_MDS_AC /tmp/ && \
+            mv /tmp/variants.annotated.tsv ${Name}.variants_annotated.tsv
+    }
+    runtime {
+             docker_image: "mgibio/cle:latest"
+             cpu: "1"
+             memory_gb: "10"
+             queue: "research-hpc"
+             resource: "rusage[gtmp=10, mem=10000]"
+             job_group: jobGroup
+    }
+    output {
+            File annotated_vcf = "${Name}.annotated.vcf.gz"
+            File annotated_filtered_vcf = "${Name}.annotated_filtered.vcf.gz"
+            File annotated_filtered_tsv = "${Name}.variants_annotated.tsv"
+    }
+}
+
 
 task gather_files {
      Array[String] OutputFiles
@@ -488,3 +582,5 @@ task return_object {
      	    File results = "obj.tsv"
      }
 }
+
+
