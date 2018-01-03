@@ -1,10 +1,10 @@
 {	
-	"ProcessHaloplexHS.JobGroup":"/dspencer/haloplextest",
-	"ProcessHaloplexHS.SampleSheet":"/gscuser/dspencer/projects/wdltest/haloplex/samples.txt",
-	"ProcessHaloplexHS.TargetBed":"/gscuser/dspencer/projects/wdltest/haloplex/allo9.bed",
-	"ProcessHaloplexHS.OutputDir":"/gscuser/dspencer/projects/wdltest/haloplex/test/",
-	"ProcessHaloplexHS.Files":["/gscuser/dspencer/projects/wdltest/haloplex/Undetermined_S0_L001_I1_001.short.fastq.gz",
-				   "/gscuser/dspencer/projects/wdltest/haloplex/Undetermined_S0_L001_I2_001.short.fastq.gz",
-				   "/gscuser/dspencer/projects/wdltest/haloplex/Undetermined_S0_L001_R1_001.short.fastq.gz",
-				   "/gscuser/dspencer/projects/wdltest/haloplex/Undetermined_S0_L001_R2_001.short.fastq.gz"]
+    "ProcessHaloplexHS.JobGroup":"/fdu/haloplextest",
+    "ProcessHaloplexHS.SampleSheet":"/gscuser/dspencer/projects/wdltest/haloplex/samples.171110_MN00410_0008_A000H2F3N3.txt",
+    "ProcessHaloplexHS.AmpliconBed":"/gscmnt/gc3042/cle_validation/myeloseq_haloplex/liftover/bed/54167-1473351497_Amplicons_hg38.bed",
+    "ProcessHaloplexHS.TargetBed":"/gscmnt/gc3042/cle_validation/myeloseq_haloplex/liftover/bed/54167-1473351497_Covered_hg38.bed",
+    "ProcessHaloplexHS.CoverageBed":"/gscmnt/gc3042/cle_validation/myeloseq_haloplex/liftover/bed/CoverageQC.hg38.120617.bed",
+    "ProcessHaloplexHS.OutputDir":"/gscmnt/gc3042/cle_validation/myeloseq_haloplex/output_dir",
+    "ProcessHaloplexHS.IlluminaDir":"/gscmnt/gc2708/info/medseq/gc2108/dspencer/dspencer/projects/myeloseq/171110_MN00410_0008_A000H2F3N3/"
 }
+
