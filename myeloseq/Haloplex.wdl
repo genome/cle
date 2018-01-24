@@ -378,7 +378,7 @@ task run_pindel_region {
     command <<<
         (set -eo pipefail && /usr/local/bin/samtools view ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
         /usr/bin/pindel -f ${refFasta} -p /tmp/in.pindel -c ${Reg} -o /tmp/out.pindel && \
-        /usr/bin/pindel2vcf -P /tmp/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R GRCh37 -d GRCh37 -v ${Name}.pindel.vcf
+        /usr/bin/pindel2vcf -P /tmp/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R GRCh38 -d GRCh38 -v ${Name}.pindel.vcf
     >>>
 
     runtime {
@@ -468,7 +468,7 @@ task clean_variants {
             /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T VariantsToAllelicPrimitives -R ${refFasta} -V /tmp/out.vcf -o ${Name}.cleaned.vcf
      }
      runtime {
-             docker_image: "dhspence/docker-amplicon-readcount:latest"
+             docker_image: "registry.gsc.wustl.edu/fdu/gatk-biopython-pysam-test1"
              cpu: "1"
              memory_gb: "10"
              queue: "research-hpc"
