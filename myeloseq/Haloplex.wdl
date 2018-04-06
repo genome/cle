@@ -1,164 +1,192 @@
 workflow ProcessHaloplexHS {
 
-  File SampleSheet
-  # sample sheet has this structure:
-  # index  sample    other stuff
+    File SampleSheet
+    # sample sheet has this structure:
+    # index  sample    other stuff
 
-  Array[Array[String]] inputData = read_tsv(SampleSheet)
+    Array[Array[String]] inputData = read_tsv(SampleSheet)
 
-  String IlluminaDir
+    String IlluminaDir
 
-  String TargetBed
-  String AmpliconBed  
-  String CoverageBed
+    String TargetBed
+    String AmpliconBed  
+    String CoverageBed
 
-  String JobGroup
-  String OutputDir
+    String JobGroup
+    String OutputDir
 
-  Array[String] Adapters = ["GATCGGAAGAGCACACGTCTGAACTCCAGTCAC","AGATCGGAAGAGCGTCGTGTAGGGAAA"]
+    Array[String] Adapters = ["GATCGGAAGAGCACACGTCTGAACTCCAGTCAC","AGATCGGAAGAGCGTCGTGTAGGGAAA"]
 
-  String Reference = "/gscmnt/gc2709/info/production_reference_GRCh38DH/reference/all_sequences.fa"
-  String VEP = "/gscmnt/gc2709/info/production_reference_GRCh38DH/CLE/IDTExome/VEP_cache"
-  String CustomAnnotation = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/liftover/vcf/myeloseq_custom_annotations.120417.hg38.vcf.gz,MYELOSEQ,vcf,exact,0,TCGA_AC,MDS_AC,MYELOSEQBLACKLIST"
+    String Reference = "/gscuser/dspencer/refdata/GRCh37/all_sequences.fa"
+    String VEP = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/VEP_cache"
+    File CustomAnnotationVcf   = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz"
+    File CustomAnnotationIndex = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz.tbi"
+    String CustomAnnotationParameters = "MYELOSEQ,vcf,exact,0,TCGA_AC,MDS_AC,MYELOSEQBLACKLIST"
 
-  call barcode_demux {
-       input: Dir=IlluminaDir, #Fastqs=get_fastq_files.fastq_files,
-              SampleSheet=SampleSheet,
-              SampleIndexMM=0,
-              jobGroup=JobGroup
-  }
+    call barcode_demux {
+        input: Dir=IlluminaDir, #Fastqs=get_fastq_files.fastq_files,
+               SampleSheet=SampleSheet,
+               SampleIndexMM=0,
+               jobGroup=JobGroup
+    }
 
-  call prepare_samples {
-       input: SampleSheet=SampleSheet,
-              Fastq1=barcode_demux.read1_fastqs,
-              Fastq2=barcode_demux.read2_fastqs,
-              jobGroup=JobGroup
-  }
+    call prepare_samples {
+        input: SampleSheet=SampleSheet,
+               Fastq1=barcode_demux.read1_fastqs,
+               Fastq2=barcode_demux.read2_fastqs,
+               jobGroup=JobGroup
+    }
 
-  scatter (samples in inputData){
-     call trim_reads {
-               input: Index=samples[0],
-                      SampleSheetFile=prepare_samples.sample_sheet,
-                      Adapters=Adapters,
-                      jobGroup=JobGroup
-     }
+    scatter (samples in inputData){
+        call trim_reads {
+            input: Index=samples[0],
+                   Name=samples[1],
+                   SampleSheetFile=prepare_samples.sample_sheet,
+                   Adapters=Adapters,
+                   jobGroup=JobGroup
+        }
 
-     call align_barcode_and_sort_reads {
-         input: Fastq=trim_reads.fastq_file,
-                refFasta=Reference,
-                jobGroup=JobGroup
-     }
+        call align_barcode_and_sort_reads {
+            input: Fastq=trim_reads.fastq_file,
+                   Name=samples[1],
+                   readGroup=samples[2],
+                   refFasta=Reference,
+                   jobGroup=JobGroup
+        }
 
-     call consensus_bam {
-           input: Bam=align_barcode_and_sort_reads.bam_file,
-                  BamIndex=align_barcode_and_sort_reads.bam_index,
-                  TargetBed=TargetBed,
-                  AmpliconBed=AmpliconBed,
-                  refFasta=Reference,
-                  jobGroup=JobGroup
-     }
+        call consensus_bam {
+            input: Bam=align_barcode_and_sort_reads.bam_file,
+                   BamIndex=align_barcode_and_sort_reads.bam_index,
+                   TargetBed=TargetBed,
+                   AmpliconBed=AmpliconBed,
+                   Name=samples[1],
+                   refFasta=Reference,
+                   jobGroup=JobGroup
+        }
 
-     call haloplex_qc {
-          input: refFasta=Reference,
-                 AlignedBam=align_barcode_and_sort_reads.bam_file,
-                 ConsensusBam=consensus_bam.bam_file,
-                 TargetBed=TargetBed,
-                 AmpliconBed=AmpliconBed,
-                 CoverageBed=CoverageBed,
-                 Name=samples[1],
-                 DemuxFile=prepare_samples.sample_sheet,
-                 jobGroup=JobGroup
- }
+        call haloplex_qc {
+            input: refFasta=Reference,
+                   AlignedBam=align_barcode_and_sort_reads.bam_file,
+                   ConsensusBam=consensus_bam.bam_file,
+                   TargetBed=TargetBed,
+                   AmpliconBed=AmpliconBed,
+                   CoverageBed=CoverageBed,
+                   Name=samples[1],
+                   DemuxFile=prepare_samples.sample_sheet,
+                   jobGroup=JobGroup
+        }
 
-     call run_varscan {
-              input: Bam=consensus_bam.bam_file,
-                     BamIndex=consensus_bam.bam_index,
-                     CoverageBed=CoverageBed,
-                     refFasta=Reference,
-                     Name=samples[1],
-                     jobGroup=JobGroup
-     }
+        call run_varscan {
+            input: Bam=consensus_bam.bam_file,
+                   BamIndex=consensus_bam.bam_index,
+                   CoverageBed=CoverageBed,
+                   refFasta=Reference,
+                   Name=samples[1],
+                   jobGroup=JobGroup
+        }
 
-     call clean_variants as clean_varscan_indels {
-          input: Vcf=run_varscan.varscan_indel_file,
-                 Name=samples[1] + ".varscan_indel",
-                 refFasta=Reference,
-                 jobGroup=JobGroup
-     }
+        call clean_variants as clean_varscan_indels {
+            input: Vcf=run_varscan.varscan_indel_file,
+                   Name=samples[1] + ".varscan_indel",
+                   refFasta=Reference,
+                   jobGroup=JobGroup
+        }
 
-     call run_platypus {
-             input: Bam=consensus_bam.bam_file,
-                    BamIndex=consensus_bam.bam_index,
-                    CoverageBed=CoverageBed,
-                    Name=samples[1],
-                    refFasta=Reference,
-                    jobGroup=JobGroup
-     }
+        call run_platypus {
+            input: Bam=consensus_bam.bam_file,
+                   BamIndex=consensus_bam.bam_index,
+                   CoverageBed=CoverageBed,
+                   Name=samples[1],
+                   refFasta=Reference,
+                   jobGroup=JobGroup
+        }
 
-     call clean_variants as clean_platypus {
-          input: Vcf=run_platypus.platypus_vcf_file,
-                 Name=samples[1] + ".platypus",
-                 refFasta=Reference,
-                 jobGroup=JobGroup
-}
+        call clean_variants as clean_platypus {
+            input: Vcf=run_platypus.platypus_vcf_file,
+                   Name=samples[1] + ".platypus",
+                   refFasta=Reference,
+                   jobGroup=JobGroup
+        }
 
-     call run_pindel_region as run_pindel_flt3itd {
-              input: Bam=consensus_bam.bam_file,
-                     BamIndex=consensus_bam.bam_index,
-                     Reg='chr13:28033987-28034316',
-                     refFasta=Reference,
-                     Name=samples[1],
-                     jobGroup=JobGroup
-     }
+        call run_pindel_region as run_pindel_flt3itd {
+            input: Bam=consensus_bam.bam_file,
+                   BamIndex=consensus_bam.bam_index,
+                   Reg='13:28608124-28608453',
+                   refFasta=Reference,
+                   Name=samples[1],
+                   jobGroup=JobGroup
+        }
 
-     call clean_variants as clean_pindel_itd {
-          input: Vcf=run_pindel_flt3itd.pindel_vcf_file,
-                 Name=samples[1],
-                 refFasta=Reference,
-                 jobGroup=JobGroup
-     }
+        call clean_variants as clean_pindel_itd {
+            input: Vcf=run_pindel_flt3itd.pindel_vcf_file,
+                   Name=samples[1],
+                   refFasta=Reference,
+                   jobGroup=JobGroup
 
-     call combine_variants {
-             input: VarscanSNV=run_varscan.varscan_snv_file,
-                    VarscanIndel=clean_varscan_indels.cleaned_vcf_file,
-                    PindelITD=clean_pindel_itd.cleaned_vcf_file,
-                    Platypus=clean_platypus.cleaned_vcf_file,
-                    Bam=consensus_bam.bam_file,
-                    BamIndex=consensus_bam.bam_index,
-                    refFasta=Reference,
-                    Name=samples[1],
-                    jobGroup=JobGroup
-     }
+        }
 
-     call run_vep {
-             input: CombineVcf=combine_variants.combined_vcf_file,
-                    refFasta=Reference,
-                    Vepcache=VEP,
-                    CustomAnnotation=CustomAnnotation,
-                    Name=samples[1],
-                    jobGroup=JobGroup
-     }
+        call combine_variants {
+            input: VarscanSNV=run_varscan.varscan_snv_file,
+                   VarscanIndel=clean_varscan_indels.cleaned_vcf_file,
+                   PindelITD=clean_pindel_itd.cleaned_vcf_file,
+                   Platypus=clean_platypus.cleaned_vcf_file,
+                   Bam=consensus_bam.bam_file,
+                   BamIndex=consensus_bam.bam_index,
+                   refFasta=Reference,
+                   Name=samples[1],
+                   jobGroup=JobGroup
+        }
 
-     call gather_files {
-          input: OutputFiles=[align_barcode_and_sort_reads.bam_file,
-                 align_barcode_and_sort_reads.bam_index,
-                 consensus_bam.bam_file,
-                 consensus_bam.bam_index,
-                 haloplex_qc.coverage_qc_file,
-                 haloplex_qc.coverage_qc_json_file,
-                 run_varscan.varscan_snv_file,
-                 clean_varscan_indels.cleaned_vcf_file,
-                 clean_pindel_itd.cleaned_vcf_file,
-                 clean_platypus.cleaned_vcf_file,
-                 combine_variants.combined_vcf_file,
-                 run_vep.annotated_vcf,
-                 run_vep.annotated_filtered_vcf,
-                 run_vep.annotated_filtered_tsv],
-                 OutputDir=OutputDir,
-                 SubDir=samples[1] + "_" + samples[0],
-                 jobGroup=JobGroup
-     }
-  }
+
+        call run_vep {
+            input: CombineVcf=combine_variants.combined_vcf_file,
+                   refFasta=Reference,
+                   Vepcache=VEP,
+                   CustomAnnotationVcf=CustomAnnotationVcf,
+                   CustomAnnotationIndex=CustomAnnotationIndex,
+                   CustomAnnotationParameters=CustomAnnotationParameters,
+                   Name=samples[1],
+                   jobGroup=JobGroup
+        }
+
+        call make_reports {
+            input: Variants=run_vep.annotated_filtered_tsv,
+                   QC=haloplex_qc.coverage_qc_json_file,
+                   Name=samples[1],
+                   jobGroup=JobGroup
+        }
+
+        call igv_session {
+            input: OutputDir=OutputDir + "/" + samples[1] + "_" + samples[0],
+                   Name=samples[1],
+                   order_by=make_reports.variant_report,
+                   jobGroup=JobGroup
+        }
+
+        call gather_files {
+            input: OutputFiles=[trim_reads.demux_fastq1_file,
+                   trim_reads.demux_fastq2_file,
+                   align_barcode_and_sort_reads.bam_file,
+                   align_barcode_and_sort_reads.bam_index,
+                   consensus_bam.bam_file,
+                   consensus_bam.bam_index,
+                   haloplex_qc.coverage_qc_file,
+                   haloplex_qc.coverage_qc_json_file,
+                   run_varscan.varscan_snv_file,
+                   clean_varscan_indels.cleaned_vcf_file,
+                   clean_pindel_itd.cleaned_vcf_file,
+                   clean_platypus.cleaned_vcf_file,
+                   combine_variants.combined_vcf_file,
+                   run_vep.annotated_vcf,
+                   run_vep.annotated_filtered_vcf,
+                   run_vep.annotated_filtered_tsv,
+                   make_reports.variant_report,
+                   igv_session.igv_xml],
+                   OutputDir=OutputDir,
+                   SubDir=samples[1] + "_" + samples[0],
+                   jobGroup=JobGroup
+        }
+    }
 }
 
 task barcode_demux {
@@ -168,28 +196,28 @@ task barcode_demux {
      String jobGroup
 
      command <<<
-          I1=$(ls ${Dir}/Fastq/*I1*.fastq.gz) && \
-          I2=$(ls ${Dir}/Fastq/*I2*.fastq.gz) && \
-          R1=$(ls ${Dir}/Fastq/*R1*.fastq.gz) && \
-          R2=$(ls ${Dir}/Fastq/*R2*.fastq.gz) && \
+          I1=$(ls ${Dir}/*I1*.fastq.gz) && \
+          I2=$(ls ${Dir}/*I2*.fastq.gz) && \
+          R1=$(ls ${Dir}/*R1*.fastq.gz) && \
+          R2=$(ls ${Dir}/*R2*.fastq.gz) && \
           cut -f 1 ${SampleSheet} > index_list.txt && \
           python /usr/bin/demultiplexer_hja_bd.py \
           --mismatches ${SampleIndexMM} --index-read-file $I1 --tag-file index_list.txt \
           --read1-file $R1 --read2-file $R2 --read3-file $I2
      >>>
      runtime {
-             docker_image: "dhspence/docker-haloplex_demux:latest"
-             cpu: "1"
-             memory_gb: "12"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=12000]"
-             job_group: jobGroup 
-     }
+         docker_image: "dhspence/docker-haloplex_demux:latest"
+         cpu: "1"
+         memory_gb: "12"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=12000]"
+         job_group: jobGroup 
+}
      output {
-        Array[File] read1_fastqs = glob("*.1.fq.gz") 
-        Array[File] read2_fastqs = glob("*.2.fq.gz")
-        File unknown_read1 = "unknown.1.fq.gz" 
-        File unknown_read2 = "unknown.2.fq.gz" 
+         Array[File] read1_fastqs = glob("*.1.fq.gz") 
+         Array[File] read2_fastqs = glob("*.2.fq.gz")
+         File unknown_read1 = "unknown.1.fq.gz" 
+         File unknown_read2 = "unknown.2.fq.gz" 
      }
 }
 
@@ -228,16 +256,16 @@ task prepare_samples {
                  print join("\t","unknown","unknown",$r1,$r2,($persamplereads1 / 4) + ($persamplereads2 / 4)),"\n"' > sample_sheet.txt
      >>>
      runtime {
-             docker_image: "ubuntu:xenial"
-             cpu: "1"
-             memory_gb: "4"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=4000]"
-             job_group: jobGroup
+         docker_image: "ubuntu:xenial"
+         cpu: "1"
+         memory_gb: "4"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=4000]"
+         job_group: jobGroup
      }
      output {
-            File sample_sheet = "sample_sheet.txt"
-            Array[Array[String]] sample_data = read_tsv("sample_sheet.txt")
+         File sample_sheet = "sample_sheet.txt"
+         Array[Array[String]] sample_data = read_tsv("sample_sheet.txt")
      }
 }
 
@@ -245,57 +273,62 @@ task trim_reads {
      String Index
      File SampleSheetFile
      Array[String] Adapters
+     String Name
      Int? TrimN
      String jobGroup
 
      command {
-     export PYTHONPATH=/opt/cutadapt/lib/python2.7/site-packages/ && \
-     /opt/cutadapt/bin/cutadapt --interleaved -a ${Adapters[0]} -A ${Adapters[1]} \
-     $(/bin/grep ${Index} ${SampleSheetFile} | cut -f 3) $(/bin/grep ${Index} ${SampleSheetFile} | cut -f 4) | \
-     /opt/cutadapt/bin/cutadapt --interleaved -u ${default=3 TrimN} -u -${default=3 TrimN} -U ${default=3 TrimN} -U -${default=3 TrimN} -m 30 -o trimmed.fq.gz - 
+         export PYTHONPATH=/opt/cutadapt/lib/python2.7/site-packages/ && \
+         cp $(/bin/grep ${Index} ${SampleSheetFile} | cut -f 3) "${Name}.1.fastq.gz" && \
+         cp $(/bin/grep ${Index} ${SampleSheetFile} | cut -f 4) "${Name}.2.fastq.gz" && \	
+         /opt/cutadapt/bin/cutadapt --interleaved -a ${Adapters[0]} -A ${Adapters[1]} \
+         $(/bin/grep ${Index} ${SampleSheetFile} | cut -f 3) $(/bin/grep ${Index} ${SampleSheetFile} | cut -f 4) | \
+         /opt/cutadapt/bin/cutadapt --interleaved -u ${default=3 TrimN} -u -${default=3 TrimN} -U ${default=3 TrimN} -U -${default=3 TrimN} -m 30 -o trimmed.fq.gz - 
      }
      runtime {
-             docker_image: "dhspence/docker-cutadapt:latest"
-             cpu: "1"
-             memory_gb: "8"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=8000]"
-             job_group: jobGroup 
+         docker_image: "dhspence/docker-cutadapt:latest"
+         cpu: "1"
+         memory_gb: "8"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=8000]"
+         job_group: jobGroup 
      }
      output {
-           File fastq_file = "trimmed.fq.gz"
+         File fastq_file = "trimmed.fq.gz"
+         File demux_fastq1_file = "${Name}.1.fastq.gz"
+         File demux_fastq2_file = "${Name}.2.fastq.gz"
      }
 }
 
 task align_barcode_and_sort_reads {
      String Fastq
+     String Name
      String refFasta
+     String readGroup
      String jobGroup
      
-     command <<<          
-     (set -eo pipefail && /usr/local/bin/bwa mem -M -t 8 -p ${refFasta} ${Fastq} \
-     -R "@RG\tPU:XX\tID:1\tLB:YY\tSM:Sample\tPL:ILLUMINA\tCN:WUGSC" | \
-     /usr/bin/perl -ane '{ if (/^@/) { print join("\t", @F),"\n"; 
-      } elsif ($F[0] =~ /:([ACGT]{8,10})$/){ 
-       push @F, "X0:Z:$1"; 
-       $F[0] =~ s/:[ACGT]{8,10}$//; 
-       print join("\t", @F), "\n"; 
-      }
-     }' | /usr/local/bin/samtools view -b -S /dev/stdin | \
-     /usr/local/bin/samtools sort -m 1G -O bam - > "aligned_sorted.bam") && \
-     /usr/local/bin/samtools index aligned_sorted.bam
+     command <<<     	     
+         (set -eo pipefail && /usr/local/bin/bwa mem -M -t 8 -p ${refFasta} ${Fastq} -R "${readGroup}" | \
+         /usr/bin/perl -ane '{ if (/^@/) { print join("\t", @F),"\n"; 
+             } elsif ($F[0] =~ /:([ACGT]{8,10})$/){ 
+             push @F, "X0:Z:$1"; 
+             $F[0] =~ s/:[ACGT]{8,10}$//; 
+             print join("\t", @F), "\n"; 
+         }}' | /usr/local/bin/samtools view -b -S /dev/stdin | \
+         /usr/local/bin/samtools sort -m 1G -O bam - > ${Name}.aligned_sorted.bam) && \
+         /usr/local/bin/samtools index ${Name}.aligned_sorted.bam
      >>>
      runtime {
-             docker_image: "registry.gsc.wustl.edu/genome/tagged-alignment:2"
-             cpu: "8"
-             memory_gb: "32"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=32000]"
-             job_group: jobGroup
+         docker_image: "registry.gsc.wustl.edu/genome/tagged-alignment:2"
+         cpu: "8"
+         memory_gb: "32"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=32000]"
+         job_group: jobGroup
      }
      output {
-          File bam_file = "aligned_sorted.bam"
-          File bam_index = "aligned_sorted.bam.bai"
+         File bam_file = "${Name}.aligned_sorted.bam"
+         File bam_index = "${Name}.aligned_sorted.bam.bai"
      }
 }
 
@@ -314,17 +347,17 @@ task haloplex_qc {
      String jobGroup
 
      command {
-          /usr/bin/perl /gscuser/dspencer/projects/wdltest/haloplex/CalculateCoverageQC.v1.121117.pl -r ${refFasta} -d ${DemuxFile} \
-     -a ${AmpliconBed} -t ${TargetBed} -b ${CoverageBed} -c ${ConsensusBam} -w ${AlignedBam} -m ${default=50 Mincov1} \
-     -q ${default='0.95' ExonQC} -n ${Name}
+         /usr/bin/perl /gscmnt/gc3042/cle_validation/myeloseq_haloplex/CalculateCoverageQC.v040218.pl -r ${refFasta} -d ${DemuxFile} \
+         -a ${AmpliconBed} -t ${TargetBed} -b ${CoverageBed} -c ${ConsensusBam} -w ${AlignedBam} -m ${default=50 Mincov1} \
+         -q ${default='0.95' ExonQC} -n ${Name}
      }
      runtime {
-             docker_image: "dhspence/docker-haloplexqc:latest"
-             cpu: "1"
-             memory_gb: "16"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=16000]"
-             job_group: jobGroup
+         docker_image: "dhspence/docker-haloplexqc:latest"
+         cpu: "1"
+         memory_gb: "16"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=16000]"
+         job_group: jobGroup
      } 
      output {
          File coverage_qc_file = "${Name}.qc.txt"
@@ -344,24 +377,24 @@ task run_varscan {
      String jobGroup
 
      command <<<
-            /usr/bin/samtools mpileup -f ${refFasta} -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
-            java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
-            --min-var-freq ${default="0.01" MinFreq} --output-vcf > ${Name}.snv.vcf && \
-            java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2indel /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
-            --min-var-freq ${default="0.01" MinFreq} --output-vcf > ${Name}.indel.vcf
+         /usr/bin/samtools mpileup -f ${refFasta} -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
+         java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
+         --min-var-freq ${default="0.01" MinFreq} --output-vcf > ${Name}.snv.vcf && \
+         java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2indel /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
+         --min-var-freq ${default="0.01" MinFreq} --output-vcf > ${Name}.indel.vcf
      >>>
 
      runtime {
-             docker_image: "mgibio/varscan-cwl:v2.4.2-samtools1.3.1"
-             cpu: "1"
-             memory_gb: "16"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=16000]"
-             job_group: jobGroup
+         docker_image: "mgibio/varscan-cwl:v2.4.2-samtools1.3.1"
+         cpu: "1"
+         memory_gb: "16"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=16000]"
+         job_group: jobGroup
      }
      output {
-            File varscan_snv_file = "${Name}.snv.vcf"
-            File varscan_indel_file = "${Name}.indel.vcf"
+         File varscan_snv_file = "${Name}.snv.vcf"
+         File varscan_indel_file = "${Name}.indel.vcf"
      }
 }
 
@@ -378,7 +411,8 @@ task run_pindel_region {
     command <<<
         (set -eo pipefail && /usr/local/bin/samtools view ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
         /usr/bin/pindel -f ${refFasta} -p /tmp/in.pindel -c ${Reg} -o /tmp/out.pindel && \
-        /usr/bin/pindel2vcf -P /tmp/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R GRCh38 -d GRCh38 -v ${Name}.pindel.vcf
+        /usr/bin/pindel2vcf -P /tmp/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R GRCh37 -d GRCh37 -v /tmp/out.vcf && \
+        sed 's/END=[0-9]*;//' /tmp/out.vcf > ${Name}.pindel.vcf
     >>>
 
     runtime {
@@ -399,31 +433,32 @@ task consensus_bam {
      File BamIndex
      String TargetBed
      String AmpliconBed
+     String Name
      String refFasta
      String jobGroup
 
      command {
-          /usr/bin/java -Xmx6g \
-          -jar /opt/gatk/public/external-example/target/external-example-1.0-SNAPSHOT.jar \
-          -T WalkerTRConsensus_wk5 -I ${Bam} \
-          -L ${TargetBed} --ampliconBed ${AmpliconBed} -dcov 1000000 \
-          -cbam consensus.bam -maxNM 5 -mmq 10 \
-          -R ${refFasta} > condense.log.txt && \
-          /usr/bin/samtools index consensus.bam
+         /usr/bin/java -Xmx6g \
+         -jar /opt/gatk/public/external-example/target/external-example-1.0-SNAPSHOT.jar \
+         -T WalkerTRConsensus_wk5 -I ${Bam} \
+         -L ${TargetBed} --ampliconBed ${AmpliconBed} -dcov 1000000 \
+         -cbam ${Name}.consensus.bam -maxNM 5 -mmq 10 \
+         -R ${refFasta} > condense.log.txt && \
+         /usr/bin/samtools index ${Name}.consensus.bam
      }
 
      runtime {
-             docker_image: "dhspence/docker-walker"
-             cpu: "1"
-             memory_gb: "8"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=8000]"
-             job_group: jobGroup
+         docker_image: "dhspence/docker-walker"
+         cpu: "1"
+         memory_gb: "8"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=8000]"
+         job_group: jobGroup
      }
      output {
-            File bam_file = "consensus.bam"
-            File bam_index = "consensus.bam.bai"
-            File log = "condense.log.txt"
+         File bam_file = "${Name}.consensus.bam"
+         File bam_index = "${Name}.consensus.bam.bai"
+         File log = "condense.log.txt"
      }
 }
 
@@ -437,23 +472,23 @@ task run_platypus {
      String jobGroup
 
      command <<<
-          /usr/bin/awk '{ print $1":"$2+1"-"$3; }' ${CoverageBed} > "regions.txt" && \
-          /usr/bin/python /opt/platypus/Platypus_0.8.1/Platypus.py callVariants --bamFiles=${Bam} \
-          --regions regions.txt --refFile=${refFasta} \
-          --nCPU 1 ${"--source=" + DocmVcf} --output="${Name}.platypus.vcf" \
-          --minReads 5 --filterDuplicates=0 --minFlank=10 --assemble 1 --filterReadPairsWithSmallInserts=0 \
-          --trimOverlapping=0 --trimSoftClipped=0 --filterReadsWithDistantMates=0 --filterReadsWithUnmappedMates=0
+         /usr/bin/awk '{ print $1":"$2+1"-"$3; }' ${CoverageBed} > "regions.txt" && \
+         /usr/bin/python /opt/platypus/Platypus_0.8.1/Platypus.py callVariants --bamFiles=${Bam} \
+         --regions regions.txt --refFile=${refFasta} \
+         --nCPU 1 ${"--source=" + DocmVcf} --output="${Name}.platypus.vcf" \
+         --minReads 5 --filterDuplicates=0 --minFlank=10 --assemble 1 --filterReadPairsWithSmallInserts=0 \
+         --trimOverlapping=0 --trimSoftClipped=0 --filterReadsWithDistantMates=0 --filterReadsWithUnmappedMates=0
      >>>
      runtime {
-             docker_image: "dhspence/docker-platypus:cle"
-             cpu: "4"
-             memory_gb: "16"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=16000]"
-             job_group: jobGroup
+         docker_image: "dhspence/docker-platypus:cle"
+         cpu: "4"
+         memory_gb: "16"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=16000]"
+         job_group: jobGroup
      }
      output {
-          File platypus_vcf_file = "${Name}.platypus.vcf"
+         File platypus_vcf_file = "${Name}.platypus.vcf"
      }
 }
 
@@ -464,19 +499,19 @@ task clean_variants {
      String jobGroup
 
      command {
-            /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --splitMultiallelics --variant ${Vcf} -o /tmp/out.vcf && \
-            /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T VariantsToAllelicPrimitives -R ${refFasta} -V /tmp/out.vcf -o ${Name}.cleaned.vcf
+         /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --splitMultiallelics --variant ${Vcf} -o /tmp/out.vcf && \
+         /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T VariantsToAllelicPrimitives -R ${refFasta} -V /tmp/out.vcf -o ${Name}.cleaned.vcf
      }
      runtime {
-             docker_image: "registry.gsc.wustl.edu/fdu/gatk-biopython-pysam-test1"
-             cpu: "1"
-             memory_gb: "10"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=10000]"
-             job_group: jobGroup
+         docker_image: "dhspence/docker-amplicon-readcount:latest"
+         cpu: "1"
+         memory_gb: "16"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=16000]"
+         job_group: jobGroup
      }
      output {
-            File cleaned_vcf_file = "${Name}.cleaned.vcf"
+         File cleaned_vcf_file = "${Name}.cleaned.vcf"
      }
 }
 
@@ -492,63 +527,114 @@ task combine_variants {
      String jobGroup
 
      command {
-          /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
-          --variant:varscanSNV ${VarscanSNV} --variant:Platypus ${Platypus} --variant:PindelITD ${PindelITD} -o combined.vcf --genotypemergeoption UNIQUIFY && \
-          /usr/bin/python /usr/bin/addAmpliconInfoAndCountReads.py -r ${refFasta} combined.vcf ${Bam} ${Name} > ${Name}.combined_and_tagged.vcf
+         /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
+         --variant:varscanSNV ${VarscanSNV} --variant:Platypus ${Platypus} --variant:PindelITD ${PindelITD} -o combined.vcf --genotypemergeoption UNIQUIFY && \
+         /usr/bin/python /gscmnt/gc3042/cle_validation/myeloseq_haloplex/addAmpliconInfoAndCountReads.v033018.py -r ${refFasta} combined.vcf ${Bam} ${Name} > ${Name}.combined_and_tagged.vcf
      }
      runtime {
-             docker_image: "registry.gsc.wustl.edu/fdu/gatk-biopython-pysam-test1"
-             cpu: "1"
-             memory_gb: "10"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=10000]"
-             job_group: jobGroup
+         docker_image: "registry.gsc.wustl.edu/fdu/gatk-biopython-pysam-scipy-test1"
+         cpu: "1"
+         memory_gb: "10"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=10000]"
+         job_group: jobGroup
      }
      output {
-            File combined_vcf_file = "${Name}.combined_and_tagged.vcf"
+         File combined_vcf_file = "${Name}.combined_and_tagged.vcf"
      }
 
 }
 
 task run_vep {
-    File CombineVcf
-    String refFasta
-    String Vepcache
-    String CustomAnnotation
-    Float? maxAF
-    String Name
-    String jobGroup
+     File CombineVcf
+     String refFasta
+     String Vepcache
+     File CustomAnnotationVcf
+     File CustomAnnotationIndex
+     String CustomAnnotationParameters
+     Float? maxAF
+     String Name
+     String jobGroup
 
-    command {
-        /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl --format vcf \
-        --vcf --plugin Downstream --plugin Wildtype --fasta ${refFasta} --hgvs --symbol --term SO --flag_pick \
-        -i ${CombineVcf} --custom ${CustomAnnotation} --offline --cache --max_af --dir ${Vepcache} -o ${Name}.annotated.vcf && \
-        /opt/htslib/bin/bgzip ${Name}.annotated.vcf && /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
-        /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /opt/vep/ensembl-vep/filter_vep -i ${Name}.annotated.vcf.gz --format vcf \
-        --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF) and not MYELOSEQ_MYELOSEQBLACKLIST" -o ${Name}.annotated_filtered.vcf && \
-        bgzip ${Name}.annotated_filtered.vcf && tabix -p vcf ${Name}.annotated_filtered.vcf.gz && \
-        /usr/bin/java -Xmx4g -jar /opt/GenomeAnalysisTK.jar -T VariantsToTable \
-        -R ${refFasta} --showFiltered --variant ${Name}.annotated_filtered.vcf.gz -o /tmp/variants.tsv \
-        -F CHROM -F POS -F ID -F FILTER -F REF -F ALT -F set -GF TAMP -GF SAMP -GF VAFTYPE -GF CVAF -GF NR -GF NV && \
-        /usr/bin/python /usr/bin/add_annotations_to_table_helper.py /tmp/variants.tsv ${Name}.annotated_filtered.vcf.gz \
-        Consequence,SYMBOL,EXON,INTRON,Feature_type,Feature,HGVSc,HGVSp,HGNC_ID,MAX_AF,MYELOSEQ_TCGA_AC,MYELOSEQ_MDS_AC /tmp/ && \
-        mv /tmp/variants.annotated.tsv ${Name}.variants_annotated.tsv
+     command {
+         if [ $(/bin/grep -v '^#' ${CombineVcf}|/usr/bin/wc -l) == 0 ]; then
+             /bin/cp ${CombineVcf} ${Name}.annotated.vcf && \
+             /bin/cp ${CombineVcf} ${Name}.annotated_filtered.vcf && \
+             /opt/htslib/bin/bgzip ${Name}.annotated.vcf && /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
+             /opt/htslib/bin/bgzip ${Name}.annotated_filtered.vcf && /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz && \
+             /usr/bin/touch ${Name}.variants_annotated.tsv
+         else
+             /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl --format vcf \
+             --vcf --plugin Downstream --plugin Wildtype --fasta ${refFasta} --hgvs --symbol --term SO --flag_pick \
+             -i ${CombineVcf} --custom ${CustomAnnotationVcf},${CustomAnnotationParameters} --offline --cache --max_af --dir ${Vepcache} -o ${Name}.annotated.vcf && \
+             /opt/htslib/bin/bgzip ${Name}.annotated.vcf && /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
+             /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /opt/vep/ensembl-vep/filter_vep -i ${Name}.annotated.vcf.gz --format vcf \
+             --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF)" -o ${Name}.annotated_filtered.vcf && \
+             /opt/htslib/bin/bgzip ${Name}.annotated_filtered.vcf && /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz && \
+             /usr/bin/java -Xmx4g -jar /opt/GenomeAnalysisTK.jar -T VariantsToTable \
+             -R ${refFasta} --showFiltered --variant ${Name}.annotated_filtered.vcf.gz -o /tmp/variants.tsv \
+             -F CHROM -F POS -F ID -F FILTER -F REF -F ALT -F set -GF TAMP -GF SAMP -GF VAFTYPE -GF CVAF -GF NR -GF NV && \
+             /usr/bin/python /usr/bin/add_annotations_to_table_helper.py /tmp/variants.tsv ${Name}.annotated_filtered.vcf.gz \
+             Consequence,SYMBOL,EXON,INTRON,Feature_type,Feature,HGVSc,HGVSp,HGNC_ID,MAX_AF,MYELOSEQ_TCGA_AC,MYELOSEQ_MDS_AC /tmp/ && \
+             mv /tmp/variants.annotated.tsv ${Name}.variants_annotated.tsv
+         fi
     }
-    runtime {
-             docker_image: "mgibio/cle:latest"
-             cpu: "1"
-             memory_gb: "10"
-             queue: "research-hpc"
-             resource: "rusage[gtmp=10, mem=10000]"
-             job_group: jobGroup
+     runtime {
+         docker_image: "mgibio/cle:latest"
+         cpu: "1"
+         memory_gb: "10"
+         queue: "research-hpc"
+         resource: "rusage[gtmp=10, mem=10000]"
+         job_group: jobGroup
     }
-    output {
-            File annotated_vcf = "${Name}.annotated.vcf.gz"
-            File annotated_filtered_vcf = "${Name}.annotated_filtered.vcf.gz"
-            File annotated_filtered_tsv = "${Name}.variants_annotated.tsv"
+     output {
+         File annotated_vcf = "${Name}.annotated.vcf.gz"
+         File annotated_filtered_vcf = "${Name}.annotated_filtered.vcf.gz"
+         File annotated_filtered_tsv = "${Name}.variants_annotated.tsv"
     }
 }
 
+task make_reports {
+     File Variants
+     File QC
+     String Name
+     String jobGroup
+
+     command {
+         /usr/bin/perl /gscmnt/gc3042/cle_validation/myeloseq_haloplex/FormatClinicalReport.v2.032818.pl ${Variants} ${QC} > ${Name}.variant_report.txt
+     }
+
+     runtime {
+         docker_image: "dhspence/docker-genomic-analysis2"
+         queue: "research-hpc"
+         job_group: jobGroup
+     } 
+
+     output {
+         File variant_report = "${Name}.variant_report.txt"
+     }
+}
+
+task igv_session {
+     String OutputDir
+     String Name
+     String order_by
+     String jobGroup
+
+     command {
+         gmt analysis dump-igv-xml-multi --bams=${OutputDir}/${Name}.consensus.bam --genome-name=${Name} --labels=${Name}.variants --output-file=${Name}.igv.xml --reference-name=b37 --review-bed-files=${OutputDir}/${Name}.annotated.vcf.gz,${OutputDir}/${Name}.annotated_filtered.vcf.gz
+   }
+
+     runtime {
+         docker_image: "registry.gsc.wustl.edu/genome/genome_perl_environment"
+         queue: "research-hpc"
+         job_group: jobGroup
+     } 
+
+     output {
+         File igv_xml = "${Name}.igv.xml"
+     }
+}
 
 task gather_files {
      Array[String] OutputFiles
@@ -560,27 +646,15 @@ task gather_files {
          if [[ ${SubDir} != "" ]] && [[ ! -e ${OutputDir}/${SubDir} ]]; then
              mkdir ${OutputDir}/${SubDir}
          fi
-             /bin/mv -f -t ${OutputDir}/${SubDir} ${sep=" " OutputFiles}
+         /bin/mv -f -t ${OutputDir}/${SubDir} ${sep=" " OutputFiles}
      }
      runtime {
-             docker_image: "ubuntu:xenial"
-             queue: "research-hpc"
-             job_group: jobGroup
+         docker_image: "ubuntu:xenial"
+         queue: "research-hpc"
+         job_group: jobGroup
      }
      output {
-            String out = stdout()
+         String out = stdout()
      }
 }
-
-task return_object {
-     Array[Object] obj
-     command {
-         cat ${write_objects(obj)} > "obj.tsv"
-     }
-
-     output {
-         File results = "obj.tsv"
-     }
-}
-
 
