@@ -7,21 +7,24 @@ workflow ProcessHaloplexHS {
     Array[Array[String]] inputData = read_tsv(SampleSheet)
 
     String IlluminaDir
-
-    String TargetBed
-    String AmpliconBed  
-    String CoverageBed
-
     String JobGroup
     String OutputDir
 
     Array[String] Adapters = ["GATCGGAAGAGCACACGTCTGAACTCCAGTCAC","AGATCGGAAGAGCGTCGTGTAGGGAAA"]
 
-    String Reference = "/gscuser/dspencer/refdata/GRCh37/all_sequences.fa"
-    String VEP = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/VEP_cache"
-    File CustomAnnotationVcf   = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz"
-    File CustomAnnotationIndex = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz.tbi"
+    String Reference    = "/gscmnt/gc2709/info/production_reference_GRCh37-lite/reference/all_sequences.fa"
+    String VEP          = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/VEP_cache"
+    String QcMetrics    = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/MyeloseqQCMetrics.txt"
+    String Description  = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/MyeloseqDescription.txt" 
+    String HaplotectBed = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq.haplotect_snppairs.041718.bed"
+    String AmpliconBed  = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/04818-1516117769_Amplicon.b37.bed"
+    String TargetBed    = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/04818-1516117769_Covered.b37.bed"
+    String CoverageBed  = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/CoverageQC.b37.040218.bed"
+
+    String CustomAnnotationVcf   = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz"
+    String CustomAnnotationIndex = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz.tbi"
     String CustomAnnotationParameters = "MYELOSEQ,vcf,exact,0,TCGA_AC,MDS_AC,MYELOSEQBLACKLIST"
+
 
     call barcode_demux {
         input: Dir=IlluminaDir, #Fastqs=get_fastq_files.fastq_files,
@@ -64,18 +67,7 @@ workflow ProcessHaloplexHS {
                    jobGroup=JobGroup
         }
 
-        call haloplex_qc {
-            input: refFasta=Reference,
-                   AlignedBam=align_barcode_and_sort_reads.bam_file,
-                   ConsensusBam=consensus_bam.bam_file,
-                   TargetBed=TargetBed,
-                   AmpliconBed=AmpliconBed,
-                   CoverageBed=CoverageBed,
-                   Name=samples[1],
-                   DemuxFile=prepare_samples.sample_sheet,
-                   jobGroup=JobGroup
-        }
-
+        
         call run_varscan {
             input: Bam=consensus_bam.bam_file,
                    BamIndex=consensus_bam.bam_index,
@@ -149,17 +141,42 @@ workflow ProcessHaloplexHS {
                    jobGroup=JobGroup
         }
 
+        call run_haplotect {
+            input: refFasta=Reference,
+                   Bam=consensus_bam.bam_file,
+                   Bed=HaplotectBed,
+                   Name=samples[1],
+                   jobGroup=JobGroup
+}
+
+        
+        call haloplex_qc {
+            input: refFasta=Reference,
+                   AlignedBam=align_barcode_and_sort_reads.bam_file,
+                   ConsensusBam=consensus_bam.bam_file,
+                   AnnotatedTsv=run_vep.annotated_filtered_tsv,
+                   TargetBed=TargetBed,
+                   AmpliconBed=AmpliconBed,
+                   CoverageBed=CoverageBed,
+                   QcMetrics=QcMetrics,
+                   Description=Description,
+                   Name=samples[1],
+                   DemuxFile=prepare_samples.sample_sheet,
+                   Haplotect=run_haplotect.out_file,
+                   HaplotectSites=run_haplotect.sites_file,
+                   jobGroup=JobGroup
+        }
+
         call make_reports {
             input: Variants=run_vep.annotated_filtered_tsv,
                    QC=haloplex_qc.coverage_qc_json_file,
+                   Description=Description,
                    Name=samples[1],
                    jobGroup=JobGroup
         }
 
         call igv_session {
-            input: OutputDir=OutputDir + "/" + samples[1] + "_" + samples[0],
-                   Name=samples[1],
-                   order_by=make_reports.variant_report,
+            input: Name=samples[1],
                    jobGroup=JobGroup
         }
 
@@ -206,7 +223,7 @@ task barcode_demux {
           --read1-file $R1 --read2-file $R2 --read3-file $I2
      >>>
      runtime {
-         docker_image: "dhspence/docker-haloplex_demux:latest"
+         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-demux:1"
          cpu: "1"
          memory_gb: "12"
          queue: "research-hpc"
@@ -231,20 +248,20 @@ task prepare_samples {
              /bin/cat ${write_tsv(Fastq1)} > 1.tmp.txt
              /bin/cat ${write_tsv(Fastq2)} > 2.tmp.txt
              /usr/bin/perl -e 'open(R1,"1.tmp.txt"); @r1 = <R1>; \
-                  chomp @r1; close R1;\
-                  open(R2,"2.tmp.txt"); @r2 = <R2>; \
-                  chomp @r2; close R2; \
-                  open(SS,"${SampleSheet}");
-                  while(<SS>){
-                      chomp;
-                      my @l = split("\t",$_);
-                      my $r1 = (grep /$l[0].1.fq.gz/, @r1)[0];
-                      my $r2 = (grep /$l[0].2.fq.gz/, @r2)[0];
-                      my $persamplereads1 = `gunzip -c $r1 | wc -l`;
-                      chomp $persamplereads1;
-                      my $persamplereads2 = `gunzip -c $r2 | wc -l`;
-                      chomp $persamplereads2;
-                      print join("\t",$l[0],$l[1],$r1,$r2,($persamplereads1 / 4) + ($persamplereads2 / 4)),"\n";
+                 chomp @r1; close R1;\
+                 open(R2,"2.tmp.txt"); @r2 = <R2>; \
+                 chomp @r2; close R2; \
+                 open(SS,"${SampleSheet}");
+                 while(<SS>){
+                     chomp;
+                     my @l = split("\t",$_);
+                     my $r1 = (grep /$l[0].1.fq.gz/, @r1)[0];
+                     my $r2 = (grep /$l[0].2.fq.gz/, @r2)[0];
+                     my $persamplereads1 = `gunzip -c $r1 | wc -l`;
+                     chomp $persamplereads1;
+                     my $persamplereads2 = `gunzip -c $r2 | wc -l`;
+                     chomp $persamplereads2;
+                     print join("\t",$l[0],$l[1],$r1,$r2,($persamplereads1 / 4) + ($persamplereads2 / 4)),"\n";
                  }
                  close SS;
                  my $r1 = (grep /unknown.1.fq.gz/, @r1)[0];
@@ -256,7 +273,7 @@ task prepare_samples {
                  print join("\t","unknown","unknown",$r1,$r2,($persamplereads1 / 4) + ($persamplereads2 / 4)),"\n"' > sample_sheet.txt
      >>>
      runtime {
-         docker_image: "ubuntu:xenial"
+         docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
          cpu: "1"
          memory_gb: "4"
          queue: "research-hpc"
@@ -286,7 +303,7 @@ task trim_reads {
          /opt/cutadapt/bin/cutadapt --interleaved -u ${default=3 TrimN} -u -${default=3 TrimN} -U ${default=3 TrimN} -U -${default=3 TrimN} -m 30 -o trimmed.fq.gz - 
      }
      runtime {
-         docker_image: "dhspence/docker-cutadapt:latest"
+         docker_image: "registry.gsc.wustl.edu/fdu/cutadapt:1"
          cpu: "1"
          memory_gb: "8"
          queue: "research-hpc"
@@ -340,19 +357,21 @@ task haloplex_qc {
      String TargetBed
      String AmpliconBed
      String CoverageBed
+     String QcMetrics
+     String Description
+     String AnnotatedTsv
      String Name
-     Int? Mincov1
-     Int? Mincov2
-     Float? ExonQC 
+     String Haplotect
+     String HaplotectSites
      String jobGroup
 
      command {
-         /usr/bin/perl /gscmnt/gc3042/cle_validation/myeloseq_haloplex/CalculateCoverageQC.v040218.pl -r ${refFasta} -d ${DemuxFile} \
-         -a ${AmpliconBed} -t ${TargetBed} -b ${CoverageBed} -c ${ConsensusBam} -w ${AlignedBam} -m ${default=50 Mincov1} \
-         -q ${default='0.95' ExonQC} -n ${Name}
+         /usr/bin/perl /usr/local/bin/CalculateCoverageQC.pl -r ${refFasta} -d ${DemuxFile} \
+         -a ${AmpliconBed} -t ${TargetBed} -b ${CoverageBed} -c ${ConsensusBam} -w ${AlignedBam} \
+         -q ${QcMetrics} -i ${Description} -v ${AnnotatedTsv} -m ${Haplotect} -p ${HaplotectSites}
      }
      runtime {
-         docker_image: "dhspence/docker-haloplexqc:latest"
+         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:1"
          cpu: "1"
          memory_gb: "16"
          queue: "research-hpc"
@@ -385,7 +404,7 @@ task run_varscan {
      >>>
 
      runtime {
-         docker_image: "mgibio/varscan-cwl:v2.4.2-samtools1.3.1"
+         docker_image: "registry.gsc.wustl.edu/fdu/varscan-2.4.2-samtools-1.3.1:1"
          cpu: "1"
          memory_gb: "16"
          queue: "research-hpc"
@@ -416,7 +435,7 @@ task run_pindel_region {
     >>>
 
     runtime {
-        docker_image: "mgibio/pindel2vcf-cwl:0.6.3"
+        docker_image: "registry.gsc.wustl.edu/fdu/pindel2vcf-0.6.3:1"
         cpu: "1"
         memory_gb: "16"
         queue: "research-hpc"
@@ -448,7 +467,7 @@ task consensus_bam {
      }
 
      runtime {
-         docker_image: "dhspence/docker-walker"
+         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-walker:1"
          cpu: "1"
          memory_gb: "8"
          queue: "research-hpc"
@@ -480,7 +499,7 @@ task run_platypus {
          --trimOverlapping=0 --trimSoftClipped=0 --filterReadsWithDistantMates=0 --filterReadsWithUnmappedMates=0
      >>>
      runtime {
-         docker_image: "dhspence/docker-platypus:cle"
+         docker_image: "registry.gsc.wustl.edu/fdu/platypus-0.8.1:1"
          cpu: "4"
          memory_gb: "16"
          queue: "research-hpc"
@@ -503,7 +522,7 @@ task clean_variants {
          /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T VariantsToAllelicPrimitives -R ${refFasta} -V /tmp/out.vcf -o ${Name}.cleaned.vcf
      }
      runtime {
-         docker_image: "dhspence/docker-amplicon-readcount:latest"
+         docker_image: "registry.gsc.wustl.edu/genome/gatk-3.6:1"
          cpu: "1"
          memory_gb: "16"
          queue: "research-hpc"
@@ -529,10 +548,10 @@ task combine_variants {
      command {
          /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
          --variant:varscanSNV ${VarscanSNV} --variant:Platypus ${Platypus} --variant:PindelITD ${PindelITD} -o combined.vcf --genotypemergeoption UNIQUIFY && \
-         /usr/bin/python /gscmnt/gc3042/cle_validation/myeloseq_haloplex/addAmpliconInfoAndCountReads.v033018.py -r ${refFasta} combined.vcf ${Bam} ${Name} > ${Name}.combined_and_tagged.vcf
+         /usr/bin/python /usr/bin/addAmpliconInfoAndCountReads.py -r ${refFasta} combined.vcf ${Bam} ${Name} > ${Name}.combined_and_tagged.vcf
      }
      runtime {
-         docker_image: "registry.gsc.wustl.edu/fdu/gatk-biopython-pysam-scipy-test1"
+         docker_image: "registry.gsc.wustl.edu/fdu/gatk-3.6-biopython-pysam-scipy-amplicon-readcount:1"
          cpu: "1"
          memory_gb: "10"
          queue: "research-hpc"
@@ -569,7 +588,7 @@ task run_vep {
              -i ${CombineVcf} --custom ${CustomAnnotationVcf},${CustomAnnotationParameters} --offline --cache --max_af --dir ${Vepcache} -o ${Name}.annotated.vcf && \
              /opt/htslib/bin/bgzip ${Name}.annotated.vcf && /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
              /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /opt/vep/ensembl-vep/filter_vep -i ${Name}.annotated.vcf.gz --format vcf \
-             --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF)" -o ${Name}.annotated_filtered.vcf && \
+             --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF) or MYELOSEQ_TCGA_AC or MYELOSEQ_MDS_AC" -o ${Name}.annotated_filtered.vcf && \
              /opt/htslib/bin/bgzip ${Name}.annotated_filtered.vcf && /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz && \
              /usr/bin/java -Xmx4g -jar /opt/GenomeAnalysisTK.jar -T VariantsToTable \
              -R ${refFasta} --showFiltered --variant ${Name}.annotated_filtered.vcf.gz -o /tmp/variants.tsv \
@@ -578,34 +597,73 @@ task run_vep {
              Consequence,SYMBOL,EXON,INTRON,Feature_type,Feature,HGVSc,HGVSp,HGNC_ID,MAX_AF,MYELOSEQ_TCGA_AC,MYELOSEQ_MDS_AC /tmp/ && \
              mv /tmp/variants.annotated.tsv ${Name}.variants_annotated.tsv
          fi
-    }
+     }
      runtime {
-         docker_image: "mgibio/cle:latest"
+         docker_image: "registry.gsc.wustl.edu/fdu/vep90-gatk3.6-htslib1.3.2:1"
          cpu: "1"
          memory_gb: "10"
          queue: "research-hpc"
          resource: "rusage[gtmp=10, mem=10000]"
          job_group: jobGroup
-    }
+     }
      output {
          File annotated_vcf = "${Name}.annotated.vcf.gz"
          File annotated_filtered_vcf = "${Name}.annotated_filtered.vcf.gz"
          File annotated_filtered_tsv = "${Name}.variants_annotated.tsv"
-    }
+     }
 }
+
+task run_haplotect {
+     String Bam
+     String Bed
+     String Name
+     String refFasta
+     String jobGroup
+
+     Int? MinReads
+
+     command {
+             /usr/bin/java -Xmx6g \
+             -jar /opt/gatk/public/external-example/target/external-example-1.0-SNAPSHOT.jar \
+             -T Haplotect -R ${refFasta} \
+             -mmq 20 -mbq 20 -dcov 20000 -unif 0 -gstol 0.001 \
+             -mr ${default=100 MinReads} \
+             -I ${Bam} \
+             -htp ${Bed} \
+             -L ${Bed} \
+             -outPrefix ${Name} && \
+             sort -u "${Name}.multihaploci.txt" > "${Name}.haplotectloci.txt" && \
+             /usr/bin/perl /opt/CalculateContamination.pl "${Name}.txt" "${Name}.haplotectloci.txt" > "${Name}.haplotect.txt"
+     }
+
+     runtime {
+             docker_image: "registry.gsc.wustl.edu/fdu/haloplex-walker:1"
+             cpu: "1"
+             memory_gb: "8"
+             queue: "research-hpc"
+             resource: "rusage[gtmp=10, mem=8000]"
+             job_group: jobGroup
+     }
+     output {
+            File out_file = "${Name}.haplotect.txt"
+            File sites_file = "${Name}.haplotectloci.txt"
+     }
+}
+
 
 task make_reports {
      File Variants
      File QC
+     File Description
      String Name
      String jobGroup
 
      command {
-         /usr/bin/perl /gscmnt/gc3042/cle_validation/myeloseq_haloplex/FormatClinicalReport.v2.032818.pl ${Variants} ${QC} > ${Name}.variant_report.txt
+         /usr/bin/perl /usr/local/bin/FormatClinicalReport.pl ${Variants} ${QC} ${Description} > ${Name}.variant_report.txt
      }
 
      runtime {
-         docker_image: "dhspence/docker-genomic-analysis2"
+         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:1"
          queue: "research-hpc"
          job_group: jobGroup
      } 
@@ -616,17 +674,25 @@ task make_reports {
 }
 
 task igv_session {
-     String OutputDir
      String Name
-     String order_by
      String jobGroup
 
      command {
-         gmt analysis dump-igv-xml-multi --bams=${OutputDir}/${Name}.consensus.bam --genome-name=${Name} --labels=${Name}.variants --output-file=${Name}.igv.xml --reference-name=b37 --review-bed-files=${OutputDir}/${Name}.annotated.vcf.gz,${OutputDir}/${Name}.annotated_filtered.vcf.gz
-   }
+         cat <<EOF > ${Name}.igv.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Session genome="b37" locus="All" version="3">
+    <Resources>
+     <Resource name="All variants" path="${Name}.annotated.vcf.gz"/>
+     <Resource name="Filtered variants" path="${Name}.annotated_filtered.vcf.gz"/>
+     <Resource name="${Name}" path="${Name}.consensus.bam"/>
+     <Resource name="Ensemble Genes" path="http://www.broadinstitute.org/igvdata/annotations/hg19/EnsemblGenes.ensGene"/>
+    </Resources>
+</Session>
+EOF
+     }
 
      runtime {
-         docker_image: "registry.gsc.wustl.edu/genome/genome_perl_environment"
+         docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
          queue: "research-hpc"
          job_group: jobGroup
      } 
@@ -649,7 +715,7 @@ task gather_files {
          /bin/mv -f -t ${OutputDir}/${SubDir} ${sep=" " OutputFiles}
      }
      runtime {
-         docker_image: "ubuntu:xenial"
+         docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
          queue: "research-hpc"
          job_group: jobGroup
      }
@@ -657,4 +723,8 @@ task gather_files {
          String out = stdout()
      }
 }
+
+
+
+
 
