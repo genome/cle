@@ -72,18 +72,17 @@ while(<F>){
     $mutgenes{$F{SYMBOL}} = 1;
 
     $F{MAX_AF} = $F{MAX_AF} ? sprintf("%.3f\%",$F{MAX_AF} * 100) : 'none';
-    push @tier12, join("\t",$cat,$F{SYMBOL},$F{EXON} ne '' ? "EXON " . $F{EXON} : "INTRON " . $F{INTRON},uc($var),$F{HGVSp_Short},$F{CVAF}) if $cat eq 'TIER 1-2';
+    push @tier12, join("\t",$F{SYMBOL},$F{EXON} ne '' ? "EXON " . $F{EXON} : "INTRON " . $F{INTRON},uc($var),$F{HGVSp_Short},$F{CVAF},"YES") if $cat eq 'TIER 1-2';
     push @tier12_full, join("\t",$F{SYMBOL},"chr".$F{CHROM}.":".$F{POS},$F{REF},$F{ALT},$F{HGVSc},$F{MAX_AF}) if $cat eq 'TIER 1-2';
 
-    push @tier3, join("\t",$cat,$F{SYMBOL},$F{EXON} ne '' ? "EXON " . $F{EXON} : "INTRON " . $F{INTRON},uc($var),$F{HGVSp_Short},$F{CVAF}) if $cat eq 'TIER 3';
+    push @tier3, join("\t",$F{SYMBOL},$F{EXON} ne '' ? "EXON " . $F{EXON} : "INTRON " . $F{INTRON},uc($var),$F{HGVSp_Short},$F{CVAF},"UNKNOWN") if $cat eq 'TIER 3';
     push @tier3_full, join("\t",$F{SYMBOL},"chr".$F{CHROM}.":".$F{POS},$F{REF},$F{ALT},$F{HGVSc},$F{MAX_AF}) if $cat eq 'TIER 3';
 
 }
 close F;
 
-print join("\t",qw(CATEGORY GENE REGION VARIANT), "PROTEIN CHANGE", "VAF"),"\n";
+print join("\t",qw(GENE REGION VARIANT), "PROTEIN CHANGE", "VAF" ,"CLINICAL SIGNIFICANCE"),"\n";
 print join("\n",@tier12,@tier3),"\n\n";
-
 
 my @wtgenes = grep { !defined($mutgenes{$_}) } sort keys %{$h->{GENECOV}};
 
@@ -91,7 +90,7 @@ print "No mutations were detected in the following sequenced genes and hotspots:
 
 my %g = ();
 foreach my $i (@{$h->{PASSED_HOTSPOTQC}}){
-  $i =~ /(\S+)_codon_(\d+)/;
+  $i =~ /(\S+)_codon_([0-9,-]+)/;
   push @{$g{$1}}, $2;
 }
 my @out = ();
@@ -107,19 +106,20 @@ print "Variant detail:\n";
 print join("\t","Gene","Location (hg19)","Reference allele","Variant allele","Transcript:Coding change","Population Frequency (%)"),"\n";
 print join("\n",@tier12_full,@tier3_full),"\n\n";
 
+print "The following target genes failed minimum sequencing QC metrics (>95% of positions with >50x coverage):\t",join(", ",map { $_ . " (" . sprintf("%.2f",$h->{FAILEDGENES}{$_}) . "% at 50x)" } sort keys %{$h->{FAILEDGENES}}),"\n\n";
 
-my %g = ();
-foreach my $i (@{$h->{FAILED_EXONS}}){
-  $i =~ /(\S+)_exon_(\d+)/;
-  push @{$g{$1}}, $2;
-}
-my @out = ();
-foreach my $j (sort keys %g){
-    my $k = join(",",sort { $a <=> $b } @{$g{$j}});
-    $k =~ s/(?<!\d)(\d+)(?:,((??{$++1}))(?!\d))+/$1-$+/g; #s/(\d+)(?:,((??{$++1})))+/$1-$+/gx;  
-    push @out, "$j (" . ($k =~ /,|-/ ? "exons" : "exon") . " $k)";
-}
-print "The following exons failed minimum sequencing QC metrics (>95% of positions with >50x coverage):\t",join(", ",@out),"\n\n";
+#my %g = ();
+#foreach my $i (@{$h->{FAILED_EXONS}}){
+#  $i =~ /(\S+)_exon_(\d+)/;
+#  push @{$g{$1}}, $2;
+#}
+#my @out = ();
+#foreach my $j (sort keys %g){
+#    my $k = join(",",sort { $a <=> $b } @{$g{$j}});
+#    $k =~ s/(?<!\d)(\d+)(?:,((??{$++1}))(?!\d))+/$1-$+/g; #s/(\d+)(?:,((??{$++1})))+/$1-$+/gx;  
+#    push @out, "$j (" . ($k =~ /,|-/ ? "exons" : "exon") . " $k)";
+#}
+#print "The following exons failed minimum sequencing QC metrics (>95% of positions with >50x coverage):\t",join(", ",@out),"\n\n";
 
 open(R,$reportinfo) || die "Cant open report info file: $reportinfo";
 while(<R>){
