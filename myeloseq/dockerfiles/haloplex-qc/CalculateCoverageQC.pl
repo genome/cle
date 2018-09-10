@@ -95,8 +95,8 @@ my $INFOFILE = '';
 my $BEDTOOLS="/usr/local/bin/bedtools";
 my $SAMTOOLS="/usr/local/bin/samtools";
 
-my $minBaseQual = 15;
-my $minMapQual = 20;
+my $minBaseQual = 10;
+my $minMapQual = 1;
 
 my $help = '';
 
@@ -257,7 +257,7 @@ open(A,$AMPLICONBED) || die "cant open file: $AMPLICONBED";
 while(<A>){
     chomp;
     my @l = split("\t",$_);
-    $amps{$l[4]} = 0;
+    $amps{$l[3]} = 0;
 }
 close A;
 
@@ -332,7 +332,8 @@ foreach my $g (sort {$a cmp $b} keys %cov){
 			  MEDIAN_RAW_COVERAGE => $raw_med, MEDIAN_TARGET_COVERAGE => $con_med, 
 			  SIZE => $cov{$g}{geneSize} };
     map { $out{GENECOV}{$g}{"PERCENT_TARGET_COVERAGE_" . $_ . "x"} = sprintf("%.1f",$cov{$g}{passedCoverage}{$_} / $cov{$g}{geneSize} * 100) } @covThresholds;
-    
+
+    $out{FAILEDGENES}{$g} = $cov{$g}{passedCoverage}{$covThresholds[0]} / $cov{$g}{geneSize} * 100 if ($cov{$g}{passedCoverage}{$covThresholds[0]} / $cov{$g}{geneSize} * 100 < $EXONCOVQC);
     
     $out{GENECOV}{$g}{FAILED_EXONS} = [];
     foreach my $e (sort keys %{$cov{$g}{exons}}){

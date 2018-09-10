@@ -58,6 +58,8 @@ maxNM = args.maxreadnm
 
 minqual = args.minbasequal
 
+minmapqual = 1
+
 strandp = args.strandpvalue
 
 minstrandsupport = args.minstrandreads
@@ -95,13 +97,13 @@ for vline in vcffile.fetch():
         # if the variant is a substitution
         if len(rec.ref) == len(rec.alts[0]) and len(rec.ref) == 1:
             
-            for pileup in samfile.pileup(rec.contig, rec.pos-1, rec.pos):            
+            for pileup in samfile.pileup(contig=rec.contig, start=rec.pos-1, stop=rec.pos):
                 if pileup.pos == rec.pos-1: # only consider the variant position
                     
                     for read in pileup.pileups:
-                        
+
                         # skip if more than maxNM edit distance for this read or position in indel or 
-                        if read.alignment.get_tag("NM") > maxNM + 1 or read.is_del or read.is_refskip or int(read.alignment.query_qualities[read.query_position]) < minqual:
+                        if read.alignment.get_tag("NM") > maxNM + 1 or read.is_del or read.is_refskip or int(read.alignment.query_qualities[read.query_position]) < minqual or read.alignment.mapping_quality < minmapqual:
                             continue
                         
                         # get number of raw reads for this collapsed read family
@@ -163,10 +165,14 @@ for vline in vcffile.fetch():
                 varlen = len(rec.alts[0]) - len(rec.ref)
                     
             reads = {}
-            for pileup in samfile.pileup(rec.contig, rec.pos-1, rec.pos):
+            for pileup in samfile.pileup(contig=rec.contig, start=rec.pos-1, stop=rec.pos):
                 if pileup.pos == rec.pos-1:
                     for read in pileup.pileups:
-                                
+
+                        # skip low map quality reads
+                        if read.alignment.mapping_quality < minmapqual:
+                            continue
+                        
                         # skip if more than maxNM + variant length edit distance for this read                                                                                                                                               
                         if read.alignment.get_tag("NM") > maxNM + varlen:
                             continue
@@ -251,8 +257,8 @@ for vline in vcffile.fetch():
         
         ampnum = len(ampcnt)
             
-        if(ampnum < 1):
-            sys.exit('No amplicons detected')
+#        if(ampnum < 1):
+#            sys.exit('No amplicons detected')
             
         for a in ampcnt:
             if ampcnt[a] >= minampreads:
