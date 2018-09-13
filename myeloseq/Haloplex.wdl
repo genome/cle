@@ -12,10 +12,10 @@ workflow ProcessHaloplexHS {
 
     Array[String] Adapters = ["GATCGGAAGAGCACACGTCTGAACTCCAGTCAC","AGATCGGAAGAGCGTCGTGTAGGGAAA"]
 
-    String Reference    = "/gscmnt/gc2709/info/production_reference_GRCh37-lite/reference/all_sequences.fa"
+    String Reference    = "/gscuser/dspencer/refdata/GRCh37/all_sequences.fa"
     String VEP          = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/VEP_cache"
     String QcMetrics    = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/MyeloseqQCMetrics.txt"
-    String Description  = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/MyeloseqDescription.txt" 
+    String Description  = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/MyeloseqDescription.1.1.txt" 
     String HaplotectBed = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq.haplotect_snppairs.041718.bed"
     String AmpliconBed  = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/04818-1516117769_Amplicon.b37.bed"
     String TargetBed    = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/04818-1516117769_Covered.b37.bed"
@@ -371,7 +371,7 @@ task haloplex_qc {
          -q ${QcMetrics} -i ${Description} -v ${AnnotatedTsv} -m ${Haplotect} -p ${HaplotectSites}
      }
      runtime {
-         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:1"
+         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:2"
          cpu: "1"
          memory_gb: "16"
          queue: "research-hpc"
@@ -551,7 +551,7 @@ task combine_variants {
          /usr/bin/python /usr/bin/addAmpliconInfoAndCountReads.py -r ${refFasta} combined.vcf ${Bam} ${Name} > ${Name}.combined_and_tagged.vcf
      }
      runtime {
-         docker_image: "registry.gsc.wustl.edu/fdu/gatk-3.6-biopython-pysam-scipy-amplicon-readcount:1"
+         docker_image: "registry.gsc.wustl.edu/fdu/gatk-3.6-biopython-pysam-scipy-amplicon-readcount:2"
          cpu: "1"
          memory_gb: "10"
          queue: "research-hpc"
@@ -663,7 +663,7 @@ task make_reports {
      }
 
      runtime {
-         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:1"
+         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:2"
          queue: "research-hpc"
          job_group: jobGroup
      } 
