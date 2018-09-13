@@ -95,6 +95,20 @@ for my $case_name (readdir $dir_h) {
             my $str = join ',', @{$data->{$case_metrics_name}};
             push @values, $str;
         }
+        elsif ($case_metrics_name eq 'FAILEDGENES') {
+            my $info = $data->{$case_metrics_name};
+            if ($info) {
+                my @strs;
+                for my $gene (keys %$info) {
+                    push @strs, $gene.'('.sprintf("%.2f",$info->{$gene}).')';
+                }
+                my $str = join ',', @strs;
+                push @values, $str;
+            }
+            else {
+                push @values, 'NA';
+            }
+        }
         else {
             push @values, $data->{$case_metrics_name};
         }
