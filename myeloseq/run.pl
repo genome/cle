@@ -80,7 +80,7 @@ $json_fh->close;
 my $out_log = File::Spec->join($dir, 'log', $name.'.out');
 my $err_log = File::Spec->join($dir, 'log', $name.'.err');
 
-`bsub -oo $out_log -eo $err_log -q research-hpc -R "select[mem>8000] rusage[mem=8000]" -M 8000000 -a "docker(sleongmgi/cromwell:develop-with-mysql)" /usr/bin/java -Dconfig.file=$conf_path -jar /cromwell/cromwell.jar run $wdl_path $json_file`;
+`bsub -oo $out_log -eo $err_log -q compute-mgi-cle -R "select[mem>8000] rusage[mem=8000]" -M 8000000 -a "docker(sleongmgi/cromwell:develop-with-mysql)" /usr/bin/java -Dconfig.file=$conf_path -jar /cromwell/cromwell.jar run $wdl_path $json_file`;
     
 print "$name job submitted\n";
 
