@@ -226,7 +226,7 @@ task barcode_demux {
          docker_image: "registry.gsc.wustl.edu/fdu/haloplex-demux:1"
          cpu: "1"
          memory_gb: "12"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=12000]"
          job_group: jobGroup 
 }
@@ -276,7 +276,7 @@ task prepare_samples {
          docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
          cpu: "1"
          memory_gb: "4"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=4000]"
          job_group: jobGroup
      }
@@ -306,7 +306,7 @@ task trim_reads {
          docker_image: "registry.gsc.wustl.edu/fdu/cutadapt:1"
          cpu: "1"
          memory_gb: "8"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=8000]"
          job_group: jobGroup 
      }
@@ -339,7 +339,7 @@ task align_barcode_and_sort_reads {
          docker_image: "registry.gsc.wustl.edu/genome/tagged-alignment:2"
          cpu: "8"
          memory_gb: "32"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=32000]"
          job_group: jobGroup
      }
@@ -374,7 +374,7 @@ task haloplex_qc {
          docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:2"
          cpu: "1"
          memory_gb: "16"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=16000]"
          job_group: jobGroup
      } 
@@ -407,7 +407,7 @@ task run_varscan {
          docker_image: "registry.gsc.wustl.edu/fdu/varscan-2.4.2-samtools-1.3.1:1"
          cpu: "1"
          memory_gb: "16"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=16000]"
          job_group: jobGroup
      }
@@ -438,7 +438,7 @@ task run_pindel_region {
         docker_image: "registry.gsc.wustl.edu/fdu/pindel2vcf-0.6.3:1"
         cpu: "1"
         memory_gb: "16"
-        queue: "research-hpc"
+        queue: "compute-mgi-cle"
         resource: "rusage[gtmp=10, mem=16000]"
         job_group: jobGroup
     }
@@ -470,7 +470,7 @@ task consensus_bam {
          docker_image: "registry.gsc.wustl.edu/fdu/haloplex-walker:1"
          cpu: "1"
          memory_gb: "8"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=8000]"
          job_group: jobGroup
      }
@@ -502,7 +502,7 @@ task run_platypus {
          docker_image: "registry.gsc.wustl.edu/fdu/platypus-0.8.1:1"
          cpu: "4"
          memory_gb: "16"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=16000]"
          job_group: jobGroup
      }
@@ -525,7 +525,7 @@ task clean_variants {
          docker_image: "registry.gsc.wustl.edu/genome/gatk-3.6:1"
          cpu: "1"
          memory_gb: "16"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=16000]"
          job_group: jobGroup
      }
@@ -554,7 +554,7 @@ task combine_variants {
          docker_image: "registry.gsc.wustl.edu/fdu/gatk-3.6-biopython-pysam-scipy-amplicon-readcount:2"
          cpu: "1"
          memory_gb: "10"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=10000]"
          job_group: jobGroup
      }
@@ -602,7 +602,7 @@ task run_vep {
          docker_image: "registry.gsc.wustl.edu/fdu/vep90-gatk3.6-htslib1.3.2:1"
          cpu: "1"
          memory_gb: "10"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          resource: "rusage[gtmp=10, mem=10000]"
          job_group: jobGroup
      }
@@ -640,7 +640,7 @@ task run_haplotect {
              docker_image: "registry.gsc.wustl.edu/fdu/haloplex-walker:1"
              cpu: "1"
              memory_gb: "8"
-             queue: "research-hpc"
+             queue: "compute-mgi-cle"
              resource: "rusage[gtmp=10, mem=8000]"
              job_group: jobGroup
      }
@@ -664,7 +664,7 @@ task make_reports {
 
      runtime {
          docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:2"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          job_group: jobGroup
      } 
 
@@ -693,7 +693,7 @@ EOF
 
      runtime {
          docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          job_group: jobGroup
      } 
 
@@ -716,7 +716,7 @@ task gather_files {
      }
      runtime {
          docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
-         queue: "research-hpc"
+         queue: "compute-mgi-cle"
          job_group: jobGroup
      }
      output {
