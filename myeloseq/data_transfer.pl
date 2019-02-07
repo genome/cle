@@ -92,7 +92,7 @@ unless (-s $private_key) {
 
 my $host  = $info{$username}->{user}.'@128.252.17.197';
 my $image = 'registry.gsc.wustl.edu/dataxfer/data-transfer-helper';
-my $queue = 'research-hpc';
+my $queue = 'compute-mgi-cle';
 
 my $cmd = "bsub -e $err_log -o $out_log -q $queue -a 'docker($image)' scp -i $private_key -r $tmp_dir $host:$dest_dir";
 system $cmd;
