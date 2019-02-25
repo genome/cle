@@ -19,7 +19,7 @@ workflow ProcessHaloplexHS {
     String HaplotectBed = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq.haplotect_snppairs.041718.bed"
     String AmpliconBed  = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/04818-1516117769_Amplicon.b37.bed"
     String TargetBed    = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/04818-1516117769_Covered.b37.bed"
-    String CoverageBed  = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/CoverageQC.b37.083118.bed"
+    String CoverageBed  = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/CoverageQC.b37.022219.bed"
 
     String CustomAnnotationVcf   = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz"
     String CustomAnnotationIndex = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz.tbi"
