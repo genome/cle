@@ -85,7 +85,6 @@ my $VCF='';
 my $VARIANTFILE='';
 my $HAPLOTECT='';
 my $HAPLOTECTSITES='';
-my $EXONCOVQC=95;
 my $COVTHRESH = '50,100,200';
 my $MINCOV1=50;
 
@@ -165,7 +164,6 @@ while(<Q>){
     $QC{$l[0]} = [ $l[1], $l[2] ];
 }
 close Q;
-
 
 my $rg = `$SAMTOOLS view -H $CBAM`;
 
@@ -333,7 +331,7 @@ foreach my $g (sort {$a cmp $b} keys %cov){
 			  SIZE => $cov{$g}{geneSize} };
     map { $out{GENECOV}{$g}{"PERCENT_TARGET_COVERAGE_" . $_ . "x"} = sprintf("%.1f",$cov{$g}{passedCoverage}{$_} / $cov{$g}{geneSize} * 100) } @covThresholds;
 
-    $out{FAILEDGENES}{$g} = $cov{$g}{passedCoverage}{$covThresholds[0]} / $cov{$g}{geneSize} * 100 if ($cov{$g}{passedCoverage}{$covThresholds[0]} / $cov{$g}{geneSize} * 100 < $EXONCOVQC);
+    $out{FAILEDGENES}{$g} = $cov{$g}{passedCoverage}{$covThresholds[0]} / $cov{$g}{geneSize} * 100 if ($cov{$g}{passedCoverage}{$covThresholds[0]} / $cov{$g}{geneSize} * 100 < $QC{PERCENT_TARGET_COVERAGE_50x}->[0]);
     
     $out{GENECOV}{$g}{FAILED_EXONS} = [];
     foreach my $e (sort keys %{$cov{$g}{exons}}){
@@ -346,7 +344,7 @@ foreach my $g (sort {$a cmp $b} keys %cov){
 					 SIZE => $cov{$g}{exons}{$e}{exonSize} };
 	map { $out{GENECOV}{$g}{exons}{$e}{"PERCENT_TARGET_COVERAGE_" . $_ . "x"} = sprintf("%.1f",$cov{$g}{exons}{$e}{passedCoverage}{$_} / $cov{$g}{exons}{$e}{exonSize} * 100) } @covThresholds;
 
-	push @{$out{GENECOV}{$g}{FAILED_EXONS}}, $e if $cov{$g}{exons}{$e}{passedCoverage}{$MINCOV1} / $cov{$g}{exons}{$e}{exonSize}  * 100 < $EXONCOVQC;
+	push @{$out{GENECOV}{$g}{FAILED_EXONS}}, $e if $cov{$g}{exons}{$e}{passedCoverage}{$MINCOV1} / $cov{$g}{exons}{$e}{exonSize} * 100 < $QC{PERCENT_TARGET_COVERAGE_50x}->[0];
     }
     $out{GENECOV}{$g}{FAILED_EXON_COUNT} = scalar @{$out{GENECOV}{$g}{FAILED_EXONS}};
 }
