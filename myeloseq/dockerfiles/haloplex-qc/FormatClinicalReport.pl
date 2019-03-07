@@ -106,7 +106,7 @@ print "Variant detail:\n";
 print join("\t","Gene","Location (hg19)","Reference allele","Variant allele","Transcript:Coding change","Population Frequency (%)"),"\n";
 print join("\n",@tier12_full,@tier3_full),"\n\n";
 
-print "The following target genes failed minimum sequencing QC metrics (>95% of positions with >50x coverage):\t",join(", ",map { $_ . " (" . sprintf("%.2f",$h->{FAILEDGENES}{$_}) . "% at 50x)" } sort keys %{$h->{FAILEDGENES}}),"\n\n";
+print "The following target genes failed minimum sequencing QC metrics (>90% of positions with >50x coverage):\t",join(", ",map { $_ . " (" . sprintf("%.2f",$h->{FAILEDGENES}{$_}) . "% at 50x)" } sort keys %{$h->{FAILEDGENES}}),"\n\n";
 
 #my %g = ();
 #foreach my $i (@{$h->{FAILED_EXONS}}){
@@ -119,7 +119,7 @@ print "The following target genes failed minimum sequencing QC metrics (>95% of 
 #    $k =~ s/(?<!\d)(\d+)(?:,((??{$++1}))(?!\d))+/$1-$+/g; #s/(\d+)(?:,((??{$++1})))+/$1-$+/gx;  
 #    push @out, "$j (" . ($k =~ /,|-/ ? "exons" : "exon") . " $k)";
 #}
-#print "The following exons failed minimum sequencing QC metrics (>95% of positions with >50x coverage):\t",join(", ",@out),"\n\n";
+#print "The following exons failed minimum sequencing QC metrics (>90% of positions with >50x coverage):\t",join(", ",@out),"\n\n";
 
 open(R,$reportinfo) || die "Cant open report info file: $reportinfo";
 while(<R>){

@@ -371,7 +371,7 @@ task haloplex_qc {
          -q ${QcMetrics} -i ${Description} -v ${AnnotatedTsv} -m ${Haplotect} -p ${HaplotectSites}
      }
      runtime {
-         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:2"
+         docker_image: "registry.gsc.wustl.edu/fdu/haloplex-qc:3"
          cpu: "1"
          memory_gb: "16"
          queue: "compute-mgi-cle"
