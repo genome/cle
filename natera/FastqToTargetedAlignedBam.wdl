@@ -289,7 +289,7 @@ task collect_alignment_metrics {
              job_group: jobGroup
      }
      output {
-            File alignMetrics = "alignment_summary.txt"
+            File alignMetrics = "${finalLabel}.alignment_summary.txt"
      }
 }
 
@@ -312,8 +312,8 @@ task collect_insert_metrics {
              job_group: jobGroup
      }
      output {
-            File isOut = "insert_size_summary.txt"
-            File isPDF = "insert_size.pdf"
+            File isOut = "${finalLabel}.insert_size_summary.txt"
+            File isPDF = "${finalLabel}.insert_size.pdf"
      }
      
 }
@@ -342,8 +342,8 @@ task collect_hs_metrics {
              job_group: jobGroup
      }
      output {
-            File hsMetrics = "hs_metric_summary.txt"
-	    File perTargetCoverage = "per_target_coverage.txt"
+            File hsMetrics = "${finalLabel}.hs_metric_summary.txt"
+	    File perTargetCoverage = "${finalLabel}.per_target_coverage.txt"
      }
      
 }
