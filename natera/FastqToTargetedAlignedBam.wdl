@@ -251,8 +251,8 @@ task mark {
      String queue
 
      command {
-             (set -eo pipefail && /usr/bin/java -Xmx16g -jar /usr/picard/picard.jar MarkDuplicates I=${mergedBam} O=/dev/stdout ASSUME_SORT_ORDER=queryname METRICS_FILE=mark_dups_metrics.txt QUIET=true COMPRESSION_LEVEL=0 VALIDATION_STRINGENCY=LENIENT | /usr/local/bin/sambamba sort -t 8 -m 18G --tmpdir=${tmp} -o "${label}.bam" /dev/stdin) && \
-             /bin/sed -i "s/NameSorted.bam/${label}.bam/" mark_dups_metrics.txt
+             (set -eo pipefail && /usr/bin/java -Xmx16g -jar /usr/picard/picard.jar MarkDuplicates I=${mergedBam} O=/dev/stdout ASSUME_SORT_ORDER=queryname METRICS_FILE="${label}.mark_dups_metrics.txt" QUIET=true COMPRESSION_LEVEL=0 VALIDATION_STRINGENCY=LENIENT | /usr/local/bin/sambamba sort -t 8 -m 18G --tmpdir=${tmp} -o "${label}.bam" /dev/stdin) && \
+             /bin/sed -i "s/NameSorted.bam/${label}.bam/" ${label}.mark_dups_metrics.txt
      }
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/sort-mark-duplicates:2"
@@ -265,7 +265,7 @@ task mark {
      output {
              File SortedBam = "${label}.bam"
              File SortedBamIndex = "${label}.bam.bai"
-             File MarkMetrics = "mark_dups_metrics.txt"
+             File MarkMetrics = "${label}.mark_dups_metrics.txt"
      }
      
 }
