@@ -14,7 +14,7 @@ my ($type, $process_id, $file) = @ARGV;
 
 die "germline mode is not supported now" if $type eq 'germline';
 
-my $dbfile = '/gscmnt/gc3042/cle_validation/sqlite_variant_DB/cle_variants.sqlite';
+my $dbfile = '/gscmnt/gc3042/cle_validation/CLE_variant_database/sqlite_variant_DB/cle_variants.sqlite';
 
 my $dbh = DBI->connect("dbi:SQLite:dbname=$dbfile", '', '', { AutoCommit => 0, RaiseError => 1 })
     or main->fatal_msg("Can't connect to db ($dbfile): " . $DBI::errstr);
@@ -32,10 +32,11 @@ while (my $line = $fh->getline) {
     chomp $line;
     next if $line =~ /^Man/;
     my @columns = split /\t/, $line;
+    my $col_ct = scalar @columns;
     my $sth;
 
     if ($type eq 'somatic') {
-        die "Expect 62 columns from $type upload file" unless @columns == 62;
+        die "Expect 44,47,56,59 or 62 columns from $type upload file" unless $col_ct =~ /^(44|47|56|59|62)$/;
         $sth = $dbh->prepare("insert into $tablename (assay_version, pipeline_version, date, process_id, normal_sample, tumor_sample, chromosome, start, stop, reference, variant, variant_type, transcript_name, trv_type, trv_type_category, c_position, amino_acid_change, default_gene_name, ensembl_gene_id, inSegDup, AML_RMG, rsid, dbSNP_caf, dbSNP_max_alt_af, onTarget, MeetsMinDepthCutoff, min_coverage_observed, max_normal_vaf_observed, max_tumor_vaf_observed, variant_callers, variant_caller_count, removed_manual_review) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)") or die $DBI::errstr;
     }
     elsif ($type eq 'germline') {
@@ -98,7 +99,7 @@ sub get_info {
 
 sub get_pipeline_version {
     my $revision = shift;
-    my ($snap_shot_version) = $revision =~ /snapshots\/genome-(\d+)\//;
+    my ($snap_shot_version) = $revision =~ /snapshots\/genome-(\d+)[\-\/]/;
 
     if ($snap_shot_version >= 3714 and $snap_shot_version < 3722) {
         return '1.3';
