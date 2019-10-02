@@ -18,8 +18,13 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$dbfile", '', '', { AutoCommit => 0, R
 
 my $tablename = 'myeloseq_variant';
 #create the database
-unless (check_table()) {
-    create_table();
+unless (check_table($tablename)) {
+    create_table($tablename);
+}
+
+my $tablename2 = 'myeloseq_variant_count';
+unless (check_table($tablename2)) {
+    create_ct_table($tablename2);
 }
 
 unless (@batch_dirs) {
@@ -29,7 +34,7 @@ unless (@batch_dirs) {
 
 my @excludes = map{'Batch'.$_}qw(29 2_version1_1 30 30_2ndRun 39 47_Manual 5.2 9_new_test2);
 
-BATCH: for my $batch_dir (@batch_dirs) {
+for my $batch_dir (@batch_dirs) {
     my $base = basename $batch_dir;
     if (grep{$base eq $_}@excludes) {
         print "$base is not valid\n";
@@ -37,7 +42,7 @@ BATCH: for my $batch_dir (@batch_dirs) {
     }
     
     opendir(my $dir_h, $batch_dir);
-    CASE: for my $case (readdir $dir_h) {
+    for my $case (readdir $dir_h) {
         next if $case =~ /^\./;
         next if $case =~ /^cromwell\-/;
         my $case_dir = File::Spec->join($batch_dir, $case);
@@ -59,7 +64,9 @@ BATCH: for my $batch_dir (@batch_dirs) {
             die "$base : $case does not have valid version";
         }
 
-        TSV: while (my $line = $fh->getline) {
+        my $ct = 0;
+
+        while (my $line = $fh->getline) {
             chomp $line;
             next if $line =~ /^CHROM/;
             my @columns = split /\t/, $line;
@@ -75,15 +82,22 @@ BATCH: for my $batch_dir (@batch_dirs) {
     
             $sth->execute_array({}, @info) or main->fatal_msg($DBI::errstr);
             $dbh->commit;
+            $ct++;
         }
         $fh->close;
+
+        my @info2 = ($version, $version, $date, $case_name, $ct);
+        my $sth = $dbh->prepare("insert into $tablename2 (assay_version, pipeline_version, date, sample, variant_count) values (?, ?, ?, ?, ?)") or die $DBI::errstr;
+        $sth->execute_array({}, @info2) or main->fatal_msg($DBI::errstr);
+        $dbh->commit;
     }
     closedir $dir_h;
     print "$base is done\n";
 }
 
 sub check_table {
-    my $sth = $dbh->prepare("select name from sqlite_master where type='table' and name='$tablename'");
+    my $table_name = shift;
+    my $sth = $dbh->prepare("select name from sqlite_master where type='table' and name='$table_name'");
     $sth->execute or main->fatal_msg($DBI::errstr);
     my @tables = $sth->fetchrow_array();
     if (@tables and @tables == 1) {
@@ -93,13 +107,22 @@ sub check_table {
         return 0;
     }
 }
+
 sub create_table {
+    my $table_name = shift;
     #For now not store ID, FILTER, VAFTYPE columns
-    my $sth = $dbh->prepare("create table $tablename (id integer primary key, assay_version text, pipeline_version text, date text, sample text, chromosome text, position integer, reference text, variant text, variant_callers text, TAMP integer, SAMP integer, CVAF float, NR integer, NV integer, consequence text, gene_symbol text, exon text, intron text, feature_type text, feature text, HGVSc text, HGVSp text, HGNC_ID integer, MAX_AF float, MYELOSEQ_TCGA_AC integer, MYELOSEQ_MDS_AC integer)");
+    my $sth = $dbh->prepare("create table $table_name (id integer primary key, assay_version text, pipeline_version text, date text, sample text, chromosome text, position integer, reference text, variant text, variant_callers text, TAMP integer, SAMP integer, CVAF float, NR integer, NV integer, consequence text, gene_symbol text, exon text, intron text, feature_type text, feature text, HGVSc text, HGVSp text, HGNC_ID integer, MAX_AF float, MYELOSEQ_TCGA_AC integer, MYELOSEQ_MDS_AC integer)");
     $sth->execute or main->fatal_msg($DBI::errstr);
     $dbh->commit;
 
     #$sth = $dbh->prepare("create unique index variant on $table_name(id)");
     #$sth->execute or main->fatal_msg($DBI::errstr);
     #$dbh->commit;
+}
+
+sub create_ct_table {
+    my $table_name = shift;
+    my $sth = $dbh->prepare("create table $table_name (id integer primary key, assay_version text, pipeline_version text, date text, sample text, variant_count integer)");
+    $sth->execute or main->fatal_msg($DBI::errstr);
+    $dbh->commit;
 }
