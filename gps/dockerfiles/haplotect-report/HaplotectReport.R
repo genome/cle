@@ -44,7 +44,7 @@ p1 <- ggplot() + geom_point(data=sites,aes(y=position,x=contam*100,color=factor(
   scale_color_manual(values = point.cols,breaks=c(0,1),labels=c("Fail","Pass (>1 read/>2%)"),name="Site evidence") +
   scale_x_continuous(limits = c(0, 50),name="Contamination estimate [%]",sec.axis = sec_axis(trans=~.,name = "Contamination estimate [%]")) +
   scale_y_discrete(name="Locus",breaks = 1:nrow(sites),labels = sites$id,limits = rev(levels(sites$position))) +
-  theme_minimal() + theme(axis.text.y = element_text(size=rel(0.75),color = "black"),axis.text.x = element_text(size=rel(1),color = "black"),legend.position = c(.8,.95), legend.background = element_rect(fill="white",color = "black",size = .25))
+  theme_minimal() + theme(axis.text.y = element_text(size=rel(0.75),color = "black"),axis.text.x = element_text(size=rel(1),color = "black"),legend.position = c(.8,.8), legend.background = element_rect(fill="white",color = "black",size = .2))
 
 p2 <- ggplot() + geom_bar(data=sites,aes(y=position,x=reads,fill=reads<100),stat = "identity",show.legend = T) +
   scale_y_discrete(name="Locus",breaks = 1:nrow(sites),labels = sites$id,limits = rev(levels(sites$position))) +
@@ -67,6 +67,6 @@ if(as.numeric(gsub("%","",contam[6,1]))>2){
   tbl$grobs[24][[1]]$gp$fill <- alpha("red",.6)
 }
 
-pdf(file=paste0("~/",contam[1,1],".contamination_report.pdf"),width = 8.5,height=nrow(sites)*.125)
-grid.arrange(tbl,p1,p2,layout_matrix=matrix(c(1,1,2,3),nrow=2,byrow = T),widths=c(1,.5),heights=c(.085,1))
+pdf(file=paste0("~/",contam[1,1],".contamination_report.pdf"),width = 8.5,height=nrow(sites)*.16)
+grid.arrange(tbl,p1,p2,layout_matrix=matrix(c(1,1,2,3),nrow=2,byrow = T),widths=c(1,.5),heights=c(.12,nrow(sites)*.012))
 dev.off()
