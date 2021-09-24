@@ -1,10 +1,10 @@
 workflow FastqToTargetedAlignedBam {
 
-  String BaitBedFile = "/gscmnt/gc2709/info/production_reference_GRCh38DH/accessory_bed_files/TCP_bait_hg38.bed"
-  String TargetBedFile = "/gscmnt/gc2709/info/production_reference_GRCh38DH/accessory_bed_files/TCP_target_hg38.bed"
-  String ContBedFile = "/gscmnt/gc2709/info/production_reference_GRCh38DH/accessory_bed_files/haplotyping_snps.010918.hg38.bed"
-  String Reference = "/gscmnt/gc2709/info/production_reference_GRCh38DH/reference/all_sequences.fa"
-  String Dictionary = "/gscmnt/gc2709/info/production_reference_GRCh38DH/reference/all_sequences.dict"
+  String BaitBedFile = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/accessory_bed_files/TCP_bait_hg38.bed"
+  String TargetBedFile = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/accessory_bed_files/TCP_target_hg38.bed"
+  String ContBedFile = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/accessory_bed_files/haplotyping_snps.010918.hg38.bed"
+  String Reference = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/reference/all_sequences.fa"
+  String Dictionary = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/reference/all_sequences.dict"
 
   Array[String] Read1s 
   Array[String] Read2s
@@ -13,93 +13,61 @@ workflow FastqToTargetedAlignedBam {
   String OutputDir
   String FinalLabel
   String ReadGroup 
-  Int Priority
-  String Project
   String Queue
 
-  Int bed_to_interval_list_priority_1 = Priority + 1
-  String bed_to_interval_list_priority_value_1 = " " + bed_to_interval_list_priority_1
   call bed_to_interval_list as BaitIntervals {
        input: bed=BaitBedFile,
        	      dict=Dictionary,
 	      jobGroup=JobGroup,
-              priority=bed_to_interval_list_priority_value_1,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int bed_to_interval_list_priority_2 = Priority + 2
-  String bed_to_interval_list_priority_value_2 = " " + bed_to_interval_list_priority_2
   call bed_to_interval_list as TargetIntervals {
        input: bed=TargetBedFile,
               dict=Dictionary,
 	      jobGroup=JobGroup,
-              priority=bed_to_interval_list_priority_value_2,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int cat_fastqs_priority_3 = Priority + 3
-  String cat_fastqs_priority_value_3 = " " + cat_fastqs_priority_3
   call cat_fastqs as cat_fastqs_read1 {
        input: readNum="1",
               fastqs=Read1s,
               finalLabel=FinalLabel,
 	      jobGroup=JobGroup,
-              priority=cat_fastqs_priority_value_3,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
  
-  Int cat_fastqs_priority_4 = Priority + 4
-  String cat_fastqs_priority_value_4 = " " + cat_fastqs_priority_4
   call cat_fastqs as cat_fastqs_read2 {
        input: readNum="2",
               fastqs=Read2s,
               finalLabel=FinalLabel,
 	      jobGroup=JobGroup,
-              priority=cat_fastqs_priority_value_4,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int align_and_tag_priority_5 = Priority + 5
-  String align_and_tag_priority_value_5 = " " + align_and_tag_priority_5
   call align_and_tag {
        input: fastqs=[cat_fastqs_read1.Fastq,cat_fastqs_read2.Fastq],
               refFasta=Reference,
               jobGroup=JobGroup,
               readGroup=ReadGroup,
-              priority=align_and_tag_priority_value_5,
-              queue=Queue,
-              project=Project
+              queue=Queue
   } 
 
-  Int name_sort_priority_6 = Priority + 6
-  String name_sort_priority_value_6 = " " + name_sort_priority_6
   call name_sort {
        input: tmp=TMPDIR,
               alignedBam=align_and_tag.TaggedBam,
               jobGroup=JobGroup,
-              priority=name_sort_priority_value_6,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int mark_priority_7 = Priority + 7
-  String mark_priority_value_7 = " " + mark_priority_7
   call mark {
        input: tmp=TMPDIR,
               mergedBam=name_sort.SortedBam,
               label=FinalLabel,
               jobGroup=JobGroup,
-              priority=mark_priority_value_7,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int contamination_priority = Priority + 8 
-  String contamination_priority_value = " " + contamination_priority
   call run_haplotect {
         input: Bam=mark.SortedBam,
             Bed=ContBedFile,
@@ -110,85 +78,55 @@ workflow FastqToTargetedAlignedBam {
             jobGroup=JobGroup
   }
 
-  Int collect_alignment_metrics_priority_8 = Priority + 8
-  String collect_alignment_metrics_priority_value_8 = " " + collect_alignment_metrics_priority_8
   call collect_alignment_metrics {
        input: in=mark.SortedBam,
               ref=Reference,
               jobGroup=JobGroup,
-              priority=collect_alignment_metrics_priority_value_8,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int collect_gc_metrics_priority_9 = Priority + 9
-  String collect_gc_metrics_priority_value_9 = " " + collect_gc_metrics_priority_9
   call collect_gc_metrics {
        input: in=mark.SortedBam,
               ref=Reference,
-              jobGroup=JobGroup + 8,
-              priority=collect_gc_metrics_priority_value_9,
-              queue=Queue,
-              project=Project
+              jobGroup=JobGroup,
+              queue=Queue
   }
 
-  Int collect_insert_metrics_priority_10 = Priority + 10
-  String collect_insert_metrics_priority_value_10 = " " + collect_insert_metrics_priority_10
   call collect_insert_metrics {
        input: in=mark.SortedBam,
               ref=Reference,
               jobGroup=JobGroup,
-              priority=collect_insert_metrics_priority_value_10,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int collect_hs_metrics_priority_11 = Priority + 11
-  String collect_hs_metrics_priority_value_11 = " " + collect_hs_metrics_priority_11
   call collect_hs_metrics {
        input: in=mark.SortedBam,
               ref=Reference,
 	      baits=BaitIntervals.intervals,
 	      targets=TargetIntervals.intervals,
               jobGroup=JobGroup,
-              priority=collect_hs_metrics_priority_value_11,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int flagstat_priority_12 = Priority + 12
-  String flagstat_priority_value_12 = " " + flagstat_priority_12
   call flagstat {
        input: in=mark.SortedBam,
               jobGroup=JobGroup,
-              priority=flagstat_priority_value_12,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int bamutil_priority_13 = Priority + 13
-  String bamutil_priority_value_13 = " " + bamutil_priority_13
   call bamutil {
        input: in=mark.SortedBam,
               jobGroup=JobGroup,
-              priority=bamutil_priority_value_13,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int remove_file_priority_14 = Priority + 14
-  String remove_file_priority_value_14 = " " + remove_file_priority_14
   call remove_file {
        input: file=align_and_tag.TaggedBam,
 	      order_by=name_sort.SortedBam,
               jobGroup=JobGroup,
-              priority=remove_file_priority_value_14,
-              queue=Queue,
-              project=Project
+              queue=Queue
   }
 
-  Int gather_result_priority_15 = Priority + 15
-  String gather_result_priority_value_15 = " " + gather_result_priority_15
   call gather_result as gather_the_rest {
        input: files=[cat_fastqs_read1.Fastq,
                      cat_fastqs_read2.Fastq,
@@ -210,9 +148,7 @@ workflow FastqToTargetedAlignedBam {
                      ],
               dir=OutputDir,
               jobGroup=JobGroup,
-              priority=gather_result_priority_value_15,
-              queue=Queue,
-              project=Project
+              queue=Queue
 
   }
 }
@@ -221,8 +157,6 @@ task bed_to_interval_list {
      String bed
      String dict
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -235,8 +169,6 @@ task bed_to_interval_list {
              queue: queue
              resource: "rusage[gtmp=10, mem=4000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
      	    File intervals = "interval_list"
@@ -248,8 +180,6 @@ task cat_fastqs {
      Array[String] fastqs
      String finalLabel
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -259,8 +189,6 @@ task cat_fastqs {
              docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
              queue: queue
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             File Fastq = "${finalLabel}.${readNum}.fastq.gz"
@@ -272,8 +200,6 @@ task align_and_tag {
      String refFasta
      String readGroup
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -286,8 +212,6 @@ task align_and_tag {
              queue: queue
              resource: "rusage[gtmp=10, mem=20000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             File TaggedBam = "refAlign.bam"
@@ -298,8 +222,6 @@ task name_sort {
      String alignedBam
      String tmp
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -312,8 +234,6 @@ task name_sort {
              queue: queue
              resource: "rusage[gtmp=10, mem=20000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
              File SortedBam = "NameSorted.bam"
@@ -325,8 +245,6 @@ task mark {
      String jobGroup
      String tmp
      String label
-     String priority
-     String project
      String queue
 
      command {
@@ -339,8 +257,6 @@ task mark {
              queue: queue
              resource: "rusage[gtmp=10, mem=50000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
              File SortedBam = "${label}.bam"
@@ -393,8 +309,6 @@ task collect_alignment_metrics {
      String in
      String ref
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -407,8 +321,6 @@ task collect_alignment_metrics {
              queue: queue
              resource: "rusage[gtmp=10, mem=18000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             File alignMetrics = "alignment_summary.txt"
@@ -419,8 +331,6 @@ task collect_gc_metrics {
      String in
      String ref
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -433,8 +343,6 @@ task collect_gc_metrics {
              queue: queue
              resource: "rusage[gtmp=10, mem=18000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             File gcOut = "GC_bias.txt"
@@ -447,8 +355,6 @@ task collect_insert_metrics {
      String in
      String ref
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -461,8 +367,6 @@ task collect_insert_metrics {
              queue: queue
              resource: "rusage[gtmp=10, mem=18000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             File isOut = "insert_size_summary.txt"
@@ -476,8 +380,6 @@ task collect_hs_metrics {
      String baits
      String targets
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -493,8 +395,6 @@ task collect_hs_metrics {
              queue: queue
              resource: "rusage[gtmp=10, mem=18000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             File hsMetrics = "hs_metric_summary.txt"
@@ -506,8 +406,6 @@ task collect_hs_metrics {
 task flagstat {
      String in
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -520,8 +418,6 @@ task flagstat {
              queue: queue
              resource: "rusage[gtmp=10, mem=10000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             File fsOut = "flagstat.out"
@@ -531,8 +427,6 @@ task flagstat {
 task bamutil {
      String in
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -545,8 +439,6 @@ task bamutil {
              queue: queue
              resource: "rusage[gtmp=10, mem=10000]"
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             File bamutilOut = "bamutil_stats.txt"
@@ -557,8 +449,6 @@ task gather_result {
      String dir
      Array[String] files
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -568,8 +458,6 @@ task gather_result {
              docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
              queue: queue
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             String out = stdout()
@@ -580,8 +468,6 @@ task remove_file {
      String file
      String? order_by
      String jobGroup
-     String priority
-     String project
      String queue
 
      command {
@@ -591,8 +477,6 @@ task remove_file {
              docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
              queue: queue
              job_group: jobGroup
-             priority: priority
-             project: project
      }
      output {
             String out = stdout()
