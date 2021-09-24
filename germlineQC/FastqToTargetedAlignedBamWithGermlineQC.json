@@ -1,1 +1,15 @@
-{"FastqToTargetedAlignedBamWithGermlineQC.TargetSetMU":"/gscmnt/production_reference/info/production_reference_GRCh38DH/accessory_vcf/1000g.100k.b38.vcf.gz.dat.mu","FastqToTargetedAlignedBamWithGermlineQC.JobGroup":"/csp/stage_computation_data/180725583","FastqToTargetedAlignedBamWithGermlineQC.TMPDIR":"/tmp/","FastqToTargetedAlignedBamWithGermlineQC.BaitBedFile":"/gscmnt/gc2709/info/production_reference_GRCh38DH/CLE/IDTExome/xgen-exome-research-panel-probes.plusGreen.sortedMerged.bed","FastqToTargetedAlignedBamWithGermlineQC.TargetSetBED":"/gscmnt/production_reference/info/production_reference_GRCh38DH/accessory_vcf/1000g.100k.b38.vcf.gz.dat.bed","FastqToTargetedAlignedBamWithGermlineQC.Read2s":["/gscmnt/gc2633/production/2859040/2021-08/csf_180725535/AACCTCAGCG-ACGCGTTCAC_S5_L001_R2_001.fastq.gz"],"FastqToTargetedAlignedBamWithGermlineQC.TargetSetUD":"/gscmnt/production_reference/info/production_reference_GRCh38DH/accessory_vcf/1000g.100k.b38.vcf.gz.dat.UD","FastqToTargetedAlignedBamWithGermlineQC.FinalLabel":"TWBR-2403003-G21-4109-PB","FastqToTargetedAlignedBamWithGermlineQC.TargetBedFile":"/gscmnt/gc2709/info/production_reference_GRCh38DH/CLE/IDTExome/xgen-exome-research-panel-probes.plusGreen.sortedMerged.bed","FastqToTargetedAlignedBamWithGermlineQC.Project":"2859040","FastqToTargetedAlignedBamWithGermlineQC.ReadGroup":"@RG\\tID:TWBR-2403003-G21-4109-PB\\tSM:TWBR-2403003-G21-4109-PB","FastqToTargetedAlignedBamWithGermlineQC.Priority":350,"FastqToTargetedAlignedBamWithGermlineQC.Queue":"compute-mgi-cle","FastqToTargetedAlignedBamWithGermlineQC.OutputDir":"/gscmnt/gc13035/production/2859040/compute_180725583","FastqToTargetedAlignedBamWithGermlineQC.Read1s":["/gscmnt/gc2633/production/2859040/2021-08/csf_180725535/AACCTCAGCG-ACGCGTTCAC_S5_L001_R1_001.fastq.gz"]}
+{
+    "FastqToTargetedAlignedBamWithGermlineQC.Read1s":["PATH"],
+    "FastqToTargetedAlignedBamWithGermlineQC.Read2s":["PATH"],
+    "FastqToTargetedAlignedBamWithGermlineQC.ReadGroup":"@RG\\tID:NAME\\tSM:NAME",
+    "FastqToTargetedAlignedBamWithGermlineQC.BaitBedFile":"/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/CLE/IDTExome/xgen-exome-research-panel-probes.plusGreen.sortedMerged.bed",
+    "FastqToTargetedAlignedBamWithGermlineQC.TargetBedFile":"/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/CLE/IDTExome/xgen-exome-research-panel-probes.plusGreen.sortedMerged.bed",
+    "FastqToTargetedAlignedBamWithGermlineQC.TargetSetBED":"/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/accessory_vcf/1000g.100k.b38.vcf.gz.dat.bed",
+    "FastqToTargetedAlignedBamWithGermlineQC.TargetSetUD":"/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/accessory_vcf/1000g.100k.b38.vcf.gz.dat.UD",
+    "FastqToTargetedAlignedBamWithGermlineQC.TargetSetMU":"/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/accessory_vcf/1000g.100k.b38.vcf.gz.dat.mu",
+    "FastqToTargetedAlignedBamWithGermlineQC.JobGroup":"/cle/wdl/germlineQC",
+    "FastqToTargetedAlignedBamWithGermlineQC.Queue":"gtac-mgi",
+    "FastqToTargetedAlignedBamWithGermlineQC.OutputDir":"PATH",
+    "FastqToTargetedAlignedBamWithGermlineQC.TMPDIR":"/tmp/",
+    "FastqToTargetedAlignedBamWithGermlineQC.FinalLabel":"NAME"
+}
