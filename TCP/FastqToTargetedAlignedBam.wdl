@@ -165,9 +165,8 @@ task bed_to_interval_list {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/sort-mark-duplicates:2"
              cpu: "1"
-             memory_gb: "4"
+             memory: "4 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=4000]"
              job_group: jobGroup
      }
      output {
@@ -208,9 +207,8 @@ task align_and_tag {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/tagged-alignment:2"
              cpu: "8"
-             memory_gb: "20"
+             memory: "20 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=20000]"
              job_group: jobGroup
      }
      output {
@@ -230,9 +228,8 @@ task name_sort {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/sambamba-0.6.4:1"
              cpu: "8"
-             memory_gb: "20"
+             memory: "20 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=20000]"
              job_group: jobGroup
      }
      output {
@@ -253,9 +250,8 @@ task mark {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/sort-mark-duplicates:2"
              cpu: "8"
-             memory_gb: "50"
+             memory: "20 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=50000]"
              job_group: jobGroup
      }
      output {
@@ -294,9 +290,8 @@ task run_haplotect {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/docker-cle-contamination:1"
              cpu: "1"
-             memory_gb: "8"
+             memory: "8 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=8000]"
              job_group: jobGroup
      }
      output {
@@ -317,9 +312,8 @@ task collect_alignment_metrics {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/picard-2.4.1-r:2"
              cpu: "2"
-             memory_gb: "18"
+             memory: "18 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=18000]"
              job_group: jobGroup
      }
      output {
@@ -339,9 +333,8 @@ task collect_gc_metrics {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/picard-2.4.1-r:2"
              cpu: "2"
-             memory_gb: "18"
+             memory: "18 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=18000]"
              job_group: jobGroup
      }
      output {
@@ -363,9 +356,8 @@ task collect_insert_metrics {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/picard-2.4.1-r:2"
              cpu: "2"
-             memory_gb: "18"
+             memory: "18 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=18000]"
              job_group: jobGroup
      }
      output {
@@ -391,9 +383,8 @@ task collect_hs_metrics {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/picard-2.4.1-r:2"
              cpu: "2"
-             memory_gb: "18"
+             memory: "18 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=18000]"
              job_group: jobGroup
      }
      output {
@@ -414,9 +405,8 @@ task flagstat {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/tagged-alignment:2"
              cpu: "1"
-             memory_gb: "10"
+             memory: "10 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=10000]"
              job_group: jobGroup
      }
      output {
@@ -435,9 +425,8 @@ task bamutil {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/bamutil:2"
              cpu: "1"
-             memory_gb: "10"
+             memory: "10 G"
              queue: queue
-             resource: "rusage[gtmp=10, mem=10000]"
              job_group: jobGroup
      }
      output {
