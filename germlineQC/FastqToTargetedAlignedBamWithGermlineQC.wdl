@@ -252,7 +252,7 @@ task mark {
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/sort-mark-duplicates:2"
              cpu: "8"
-             memory: "20 G"
+             memory: "50 G"
              queue: queue
              job_group: jobGroup
      }
