@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
 import sqlite3
+import sys
 
-db = '/storage1/fs1/gtac-mgi/Active/CLE/validation/cle_validation/CLE_variant_database/sqlite_variant_DB/aml_clearance_variant.db'
+if len(sys.argv) != 2:
+    sys.exit("Need provide sqlite3 DB path")
+
+db = sys.argv[1] 
 
 con = sqlite3.connect(db)
 cur = con.cursor()
