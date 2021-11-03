@@ -5,10 +5,15 @@ import sqlite3
 import warnings
 import fnmatch
 import glob
+import sys
 import os
 import re
 
-db = '/storage1/fs1/gtac-mgi/Active/CLE/validation/cle_validation/CLE_variant_database/sqlite_variant_DB/aml_clearance_variant.db'
+if len(sys.argv) != 3:
+    sys.exit("Need two arguments: upload report directory path and sqlite DB path")
+
+tsv_dir = sys.argv[1]
+db = sys.argv[2]
 
 con = sqlite3.connect(db)
 cur = con.cursor()
@@ -16,9 +21,10 @@ cur = con.cursor()
 if os.path.exists(db) and os.path.getsize(db) > 0:
     print("AML_clearance varaint DB existing")
 else:
+    print("Create aml_clearance_somatic_variants table")
     cur.execute("create table aml_clearance_somatic_variants (id integer primary key, assay_type text, case_name text, chromosome text, position integer, reference text, variant text, variant_type text, transcript_name text, consequence text, symbol text, c_position text, amino_acid_change text, variant_callers text)")
 
-for f in sorted(glob.glob('/storage1/fs1/gtac-mgi/Active/CLE/validation/cle_validation/CLE_variant_database/reports/AML_trio/*.tsv', recursive=True)):
+for f in sorted(glob.glob(tsv_dir + "/*.tsv", recursive=True)):
     if fnmatch.fnmatch(os.path.basename(f), '*full_variant_report*'):
         p = re.compile("(.*).full_variant_report")
         result = p.search(os.path.basename(f))
