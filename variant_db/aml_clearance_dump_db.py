@@ -2,7 +2,7 @@
 
 import sqlite3
 
-db = 'test.db'
+db = '/storage1/fs1/gtac-mgi/Active/CLE/validation/cle_validation/CLE_variant_database/sqlite_variant_DB/aml_clearance_variant.db'
 
 con = sqlite3.connect(db)
 cur = con.cursor()
