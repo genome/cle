@@ -2,7 +2,7 @@ workflow FastqToTargetedAlignedBam {
 
   String BaitBedFile = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/accessory_bed_files/TCP_bait_hg38.bed"
   String TargetBedFile = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/accessory_bed_files/TCP_target_hg38.bed"
-  String ContBedFile = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/accessory_bed_files/haplotyping_snps.010918.hg38.bed"
+  String ContBedFile = "/storage1/fs1/gtac-mgi/Active/CLE/assay/TCP/input/accessory_files/haplotyping_snps.090122.hg38.bed"
   String Reference = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/reference/all_sequences.fa"
   String Dictionary = "/storage1/fs1/gtac-mgi/Active/CLE/reference/production_reference_GRCh38DH/reference/all_sequences.dict"
 
@@ -17,15 +17,15 @@ workflow FastqToTargetedAlignedBam {
 
   call bed_to_interval_list as BaitIntervals {
        input: bed=BaitBedFile,
-       	      dict=Dictionary,
-	      jobGroup=JobGroup,
+              dict=Dictionary,
+              jobGroup=JobGroup,
               queue=Queue
   }
 
   call bed_to_interval_list as TargetIntervals {
        input: bed=TargetBedFile,
               dict=Dictionary,
-	      jobGroup=JobGroup,
+              jobGroup=JobGroup,
               queue=Queue
   }
 
@@ -33,15 +33,15 @@ workflow FastqToTargetedAlignedBam {
        input: readNum="1",
               fastqs=Read1s,
               finalLabel=FinalLabel,
-	      jobGroup=JobGroup,
+              jobGroup=JobGroup,
               queue=Queue
   }
- 
+
   call cat_fastqs as cat_fastqs_read2 {
        input: readNum="2",
               fastqs=Read2s,
               finalLabel=FinalLabel,
-	      jobGroup=JobGroup,
+              jobGroup=JobGroup,
               queue=Queue
   }
 
@@ -51,7 +51,7 @@ workflow FastqToTargetedAlignedBam {
               jobGroup=JobGroup,
               readGroup=ReadGroup,
               queue=Queue
-  } 
+  }
 
   call name_sort {
        input: tmp=TMPDIR,
@@ -102,8 +102,8 @@ workflow FastqToTargetedAlignedBam {
   call collect_hs_metrics {
        input: in=mark.SortedBam,
               ref=Reference,
-	      baits=BaitIntervals.intervals,
-	      targets=TargetIntervals.intervals,
+              baits=BaitIntervals.intervals,
+              targets=TargetIntervals.intervals,
               jobGroup=JobGroup,
               queue=Queue
   }
@@ -122,7 +122,7 @@ workflow FastqToTargetedAlignedBam {
 
   call remove_file {
        input: file=align_and_tag.TaggedBam,
-	      order_by=name_sort.SortedBam,
+              order_by=name_sort.SortedBam,
               jobGroup=JobGroup,
               queue=Queue
   }
@@ -131,15 +131,15 @@ workflow FastqToTargetedAlignedBam {
        input: files=[cat_fastqs_read1.Fastq,
                      cat_fastqs_read2.Fastq,
                      mark.SortedBam,
-	             mark.SortedBamIndex,
+                     mark.SortedBamIndex,
                      collect_alignment_metrics.alignMetrics,
                      collect_gc_metrics.gcOut,
                      collect_gc_metrics.gcSum,
                      collect_gc_metrics.gcPDF,
                      collect_insert_metrics.isOut,
                      collect_insert_metrics.isPDF,
-		     collect_hs_metrics.hsMetrics,
-		     collect_hs_metrics.perTargetCoverage,
+                     collect_hs_metrics.hsMetrics,
+                     collect_hs_metrics.perTargetCoverage,
                      flagstat.fsOut,
                      bamutil.bamutilOut,
                      mark.MarkMetrics,
@@ -376,9 +376,9 @@ task collect_hs_metrics {
 
      command {
              /usr/bin/java -Xmx16g -jar /usr/picard/picard.jar CollectHsMetrics REFERENCE_SEQUENCE=${ref} INPUT=${in} \
-	     		   BAIT_INTERVALS=${baits} TARGET_INTERVALS=${targets} \
-			   MINIMUM_MAPPING_QUALITY=1 MINIMUM_BASE_QUALITY=1 \
-			   OUTPUT="hs_metric_summary.txt" PER_TARGET_COVERAGE="per_target_coverage.txt"
+             BAIT_INTERVALS=${baits} TARGET_INTERVALS=${targets} \
+             MINIMUM_MAPPING_QUALITY=1 MINIMUM_BASE_QUALITY=1 \
+             OUTPUT="hs_metric_summary.txt" PER_TARGET_COVERAGE="per_target_coverage.txt"
      }
      runtime {
              docker_image: "registry.gsc.wustl.edu/genome/picard-2.4.1-r:2"
@@ -389,7 +389,7 @@ task collect_hs_metrics {
      }
      output {
             File hsMetrics = "hs_metric_summary.txt"
-	    File perTargetCoverage = "per_target_coverage.txt"
+            File perTargetCoverage = "per_target_coverage.txt"
      }
      
 }
